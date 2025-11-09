@@ -31,6 +31,7 @@ import {
   Info,
   Phone,
   Compass,
+  University,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -108,27 +109,27 @@ const mainMenu: MenuItem[] = [
     url: "/products", // Base URL for products
     subMenu: [
       {
-        title: "All Products",
+        title: "GDGoC KAIST",
         url: "/products/all",
-        description: "Browse our complete catalog.",
-        icon: <ShoppingCart />,
+        description: "GDGoC KAIST를 소개합니다.",
+        icon: <University />,
       },
       {
-        title: "New Arrivals",
+        title: "동아리원",
         url: "/products/new",
-        description: "Discover the latest additions.",
-        icon: <Compass />,
+        description: "",
+        icon: <Users />,
       },
       {
-        title: "Categories",
+        title: "동아리 연락처",
         url: "/products/categories",
-        description: "Explore by product type.",
-        icon: <LayoutDashboard />,
+        description: "",
+        icon: <Phone />,
       },
     ],
   },
   {
-    title: "About Us",
+    title: "프로젝트",
     url: "/about",
     subMenu: [
       {
@@ -146,7 +147,7 @@ const mainMenu: MenuItem[] = [
     ],
   },
   {
-    title: "Support",
+    title: "세미나",
     url: "/support",
     subMenu: [
       {

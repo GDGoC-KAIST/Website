@@ -7,7 +7,7 @@ export default function Home() {
       <NavBar2 
         authLinks={{ visible:false }}
         domain={{
-          name: 'GDGoC',
+          name: 'GDGoC KAIST',
           logo: (
             <div className = "flex size-8 bg-primary justify-center items-center">
               <img src="/gdgoc_icon.png" alt="gdgoc_icon"></img>
@@ -15,6 +15,10 @@ export default function Home() {
           ),
         }}  
       />
+      <div className='flex justify-center items-center h-screen'>
+        <img className='max-w-full h-auto' src = "/gdgoc_icon.png"/>
+        
+      </div>
     </div>
   )
 }
