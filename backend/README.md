@@ -14,15 +14,25 @@ npm install
 ### 2. Firebase 로그인
 
 ```bash
+# npm run 사용
 npm run firebase:login
+
+# npx 사용
+npx firebase login
 ```
 
 ### 3. Firebase 프로젝트 초기화
 
 ```bash
+# npm run 사용
 npm run firebase:init
 # 또는 특정 기능만 초기화
 npm run firebase:init -- functions
+
+# npx 사용
+npx firebase init
+# 또는 특정 기능만 초기화
+npx firebase init emulators
 ```
 
 `firebase init` 명령어가 다음을 자동으로 생성합니다:
@@ -46,8 +56,11 @@ npm run firebase:init -- functions
 # backend 디렉토리에서
 cd backend
 
-# 에뮬레이터 실행
+# 방법 1: npm run 스크립트 사용
 npm run firebase:emulators
+
+# 방법 2: npx로 직접 실행 (권장)
+npx firebase emulators:start
 ```
 
 실행 후 접속 가능한 URL:
@@ -57,7 +70,11 @@ npm run firebase:emulators
 
 Functions만 실행하려면:
 ```bash
+# npm run 사용
 npm run firebase:emulators:functions
+
+# npx 사용
+npx firebase emulators:start --only functions
 ```
 
 ### 함수 배포
@@ -69,11 +86,13 @@ npm run firebase:emulators:functions
 
 2. 배포 실행:
 ```bash
-# Functions만 배포
-npm run firebase:deploy:functions
+# npm run 사용
+npm run firebase:deploy:functions  # Functions만 배포
+npm run firebase:deploy             # 전체 배포
 
-# 전체 배포
-npm run firebase:deploy
+# npx 사용
+npx firebase deploy --only functions  # Functions만 배포
+npx firebase deploy                   # 전체 배포
 ```
 
 **참고:** Blaze 플랜은 무료 할당량이 있어서 소규모 사용은 무료입니다.
@@ -81,8 +100,9 @@ npm run firebase:deploy
 - Storage: 일 5GB 다운로드, 1GB 저장 무료
 - Firestore: 일 50,000회 읽기, 20,000회 쓰기 무료
 
-## 사용 가능한 스크립트
+## 사용 가능한 명령어
 
+### npm run 스크립트
 - `npm run firebase` - Firebase CLI 직접 사용
 - `npm run firebase:login` - Firebase 로그인
 - `npm run firebase:init` - Firebase 프로젝트 초기화
@@ -90,6 +110,16 @@ npm run firebase:deploy
 - `npm run firebase:emulators:functions` - Functions 에뮬레이터만 실행
 - `npm run firebase:deploy` - 전체 배포
 - `npm run firebase:deploy:functions` - Functions만 배포
+
+### npx 직접 사용 (권장)
+- `npx firebase login` - Firebase 로그인
+- `npx firebase init` - Firebase 프로젝트 초기화
+- `npx firebase emulators:start` - 에뮬레이터 실행
+- `npx firebase emulators:start --only functions` - Functions 에뮬레이터만 실행
+- `npx firebase deploy` - 전체 배포
+- `npx firebase deploy --only functions` - Functions만 배포
+
+**참고:** `npx`를 사용하면 전역 설치 없이도 Firebase CLI를 사용할 수 있습니다.
 
 ## 참고
 

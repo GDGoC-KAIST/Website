@@ -29,5 +29,14 @@ export {
   deleteImage,
 } from "./controllers/imageController";
 
+// 멤버 관련 함수들 (Controller)
+export {
+  createMember,
+  getMembers,
+  getMember,
+  updateMember,
+  deleteMember,
+} from "./controllers/memberController";
+
 // API 문서 관련 함수들
 export {apiDocs, apiSpec} from "./handlers/docs";

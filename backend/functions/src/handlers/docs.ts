@@ -20,9 +20,9 @@ export const apiDocs = onRequest((request, response) => {
   const spec = {
     openapi: "3.0.0",
     info: {
-      title: "이미지 CRUD API",
+      title: "GDGoC API",
       version: "1.0.0",
-      description: "Firebase Functions를 통한 이미지 CRUD API",
+      description: "Firebase Functions를 통한 이미지 및 멤버 CRUD API",
     },
     servers: [
       {
@@ -92,6 +92,74 @@ export const apiDocs = onRequest((request, response) => {
         delete: {
           summary: "이미지 삭제",
           parameters: [{name: "imageId", in: "path", required: true, schema: {type: "string"}}],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/createMember": {
+        post: {
+          summary: "멤버 생성",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "email", "department", "githubUsername"],
+                  properties: {
+                    name: {type: "string", description: "이름"},
+                    email: {type: "string", description: "이메일"},
+                    department: {type: "string", description: "학과"},
+                    githubUsername: {type: "string", description: "GitHub 사용자명"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"201": {description: "멤버 생성 성공"}},
+        },
+      },
+      "/us-central1/getMembers": {
+        get: {
+          summary: "멤버 목록 조회",
+          parameters: [
+            {name: "limit", in: "query", schema: {type: "integer", default: 50}},
+            {name: "offset", in: "query", schema: {type: "integer", default: 0}},
+          ],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/getMember/{memberId}": {
+        get: {
+          summary: "단일 멤버 조회",
+          parameters: [{name: "memberId", in: "path", required: true, schema: {type: "string"}}],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/updateMember/{memberId}": {
+        put: {
+          summary: "멤버 업데이트",
+          parameters: [{name: "memberId", in: "path", required: true, schema: {type: "string"}}],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: {type: "string"},
+                    email: {type: "string"},
+                    department: {type: "string"},
+                    githubUsername: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/deleteMember/{memberId}": {
+        delete: {
+          summary: "멤버 삭제",
+          parameters: [{name: "memberId", in: "path", required: true, schema: {type: "string"}}],
           responses: {"200": {description: "성공"}},
         },
       },
@@ -287,6 +355,149 @@ export const apiSpec = onRequest((request, response) => {
           parameters: [
             {
               name: "imageId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/createMember": {
+        post: {
+          summary: "멤버 생성",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "email", "department", "githubUsername"],
+                  properties: {
+                    name: {
+                      type: "string",
+                      description: "이름",
+                    },
+                    email: {
+                      type: "string",
+                      description: "이메일",
+                    },
+                    department: {
+                      type: "string",
+                      description: "학과",
+                    },
+                    githubUsername: {
+                      type: "string",
+                      description: "GitHub 사용자명",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "멤버 생성 성공",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/getMembers": {
+        get: {
+          summary: "멤버 목록 조회",
+          parameters: [
+            {
+              name: "limit",
+              in: "query",
+              schema: {type: "integer", default: 50},
+            },
+            {
+              name: "offset",
+              in: "query",
+              schema: {type: "integer", default: 0},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/getMember/{memberId}": {
+        get: {
+          summary: "단일 멤버 조회",
+          parameters: [
+            {
+              name: "memberId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/updateMember/{memberId}": {
+        put: {
+          summary: "멤버 업데이트",
+          parameters: [
+            {
+              name: "memberId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: {type: "string"},
+                    email: {type: "string"},
+                    department: {type: "string"},
+                    githubUsername: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/deleteMember/{memberId}": {
+        delete: {
+          summary: "멤버 삭제",
+          parameters: [
+            {
+              name: "memberId",
               in: "path",
               required: true,
               schema: {type: "string"},

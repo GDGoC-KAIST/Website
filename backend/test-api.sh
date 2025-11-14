@@ -44,6 +44,45 @@ echo -e "\n=== 이미지 삭제 (DELETE) ==="
 #   -H "Content-Type: application/json" \
 #   | jq '.' || echo ""
 
+echo -e "\n=== 멤버 생성 (POST) ==="
+curl -X POST "${BASE_URL}/createMember" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "홍길동",
+    "email": "hong@example.com",
+    "department": "컴퓨터공학과",
+    "githubUsername": "octocat"
+  }' \
+  | jq '.' || echo ""
+
+echo -e "\n=== 멤버 목록 조회 (GET) ==="
+curl -X GET "${BASE_URL}/getMembers" \
+  -H "Content-Type: application/json" \
+  | jq '.' || echo ""
+
+echo -e "\n=== 단일 멤버 조회 (GET) ==="
+# 위에서 생성한 멤버 ID를 사용하세요
+# MEMBER_ID="your-member-id"
+# curl -X GET "${BASE_URL}/getMember/${MEMBER_ID}" \
+#   -H "Content-Type: application/json" \
+#   | jq '.' || echo ""
+
+echo -e "\n=== 멤버 업데이트 (PUT) ==="
+# MEMBER_ID="your-member-id"
+# curl -X PUT "${BASE_URL}/updateMember/${MEMBER_ID}" \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "name": "홍길동 수정",
+#     "department": "전기전자공학과"
+#   }' \
+#   | jq '.' || echo ""
+
+echo -e "\n=== 멤버 삭제 (DELETE) ==="
+# MEMBER_ID="your-member-id"
+# curl -X DELETE "${BASE_URL}/deleteMember/${MEMBER_ID}" \
+#   -H "Content-Type: application/json" \
+#   | jq '.' || echo ""
+
 echo -e "\n=== API 문서 (Swagger UI) ==="
 echo "브라우저에서 접속: ${BASE_URL}/apiDocs"
 
