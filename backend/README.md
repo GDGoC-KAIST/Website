@@ -41,11 +41,22 @@ npm run firebase:init -- functions
 ## 개발
 
 ### 로컬 에뮬레이터 실행
-```bash
-# 모든 에뮬레이터 실행
-npm run firebase:emulators
 
-# Functions만 실행
+```bash
+# backend 디렉토리에서
+cd backend
+
+# 에뮬레이터 실행
+npm run firebase:emulators
+```
+
+실행 후 접속 가능한 URL:
+- **Functions**: `http://localhost:5001`
+- **Emulator UI**: `http://localhost:4000`
+- **Swagger UI (API 테스트)**: `http://localhost:5001/gdgoc-web/us-central1/apiDocs`
+
+Functions만 실행하려면:
+```bash
 npm run firebase:emulators:functions
 ```
 
