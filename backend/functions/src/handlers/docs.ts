@@ -218,9 +218,9 @@ export const apiSpec = onRequest((request, response) => {
   const spec = {
     openapi: "3.0.0",
     info: {
-      title: "이미지 CRUD API",
+      title: "GDGoC API",
       version: "1.0.0",
-      description: "Firebase Functions를 통한 이미지 CRUD API",
+      description: "Firebase Functions를 통한 이미지 및 멤버 CRUD API",
     },
     servers: [
       {
