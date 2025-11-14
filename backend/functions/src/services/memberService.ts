@@ -138,7 +138,7 @@ export class MemberService {
   // 멤버 업데이트
   async updateMember(
     memberId: string,
-    updateData: Partial<Pick<MemberData, "name" | "email" | "department" | "githubUsername">>
+    updateData: Partial<Pick<MemberData, "name" | "email" | "department" | "githubUsername" | "isAdmin">>
   ): Promise<MemberData> {
     const updatePayload: Partial<MemberData> = {
       updatedAt: Timestamp.now(),

@@ -1,4 +1,33 @@
 import * as admin from "firebase-admin";
+import * as path from "path";
+
+// 환경 변수 로드 (.env 파일에서)
+// 에뮬레이터 환경에서만 dotenv 사용 (프로덕션에서는 Firebase Functions가 자동으로 환경 변수 제공)
+if (process.env.FUNCTIONS_EMULATOR) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const dotenv = require("dotenv");
+    // lib/.env 경로 (컴파일된 파일 기준: lib/config/firebase.js -> lib/.env)
+    const envPath = path.join(__dirname, "../.env");
+    const result = dotenv.config({path: envPath});
+    
+    if (result.error) {
+      console.warn("⚠️ .env file not found or error loading:", result.error.message);
+      console.warn(`   Expected location: ${envPath} (functions/lib/.env)`);
+      console.warn("   Create .env file in backend/functions/lib/.env");
+      console.warn("   See README.md for .env file format");
+    } else {
+      console.log("✅ .env file loaded successfully");
+      console.log(`   Location: ${envPath}`);
+      console.log("   EMAIL_USER:", process.env.EMAIL_USER ? "***set***" : "not set");
+      console.log("   EMAIL_PASSWORD:", process.env.EMAIL_PASSWORD ? "***set***" : "not set");
+      console.log("   ADMIN_EMAIL:", process.env.ADMIN_EMAIL || "not set");
+    }
+  } catch (error) {
+    console.warn("⚠️ Failed to load dotenv:", error);
+    // dotenv가 없어도 계속 진행 (환경 변수를 직접 export한 경우)
+  }
+}
 
 // Firebase Admin 초기화
 // 에뮬레이터 환경 변수 확인 및 설정

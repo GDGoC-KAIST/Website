@@ -36,7 +36,29 @@ export {
   getMember,
   updateMember,
   deleteMember,
+  getAdmins,
 } from "./controllers/memberController";
+
+// 인증 관련 함수들 (Controller)
+export {
+  loginWithGitHub,
+  getUser,
+  checkApprovalStatus,
+} from "./controllers/authController";
+
+// 관리자 관련 함수들 (Controller)
+export {
+  getPendingUsers,
+  approveUser,
+  rejectUser,
+  grantAdmin,
+} from "./controllers/adminController";
+
+// 승인 처리 관련 함수들 (Controller)
+export {handleApproval} from "./controllers/approvalController";
 
 // API 문서 관련 함수들
 export {apiDocs, apiSpec} from "./handlers/docs";
+
+// 테스트 관련 함수들
+export {testEmail} from "./controllers/testEmailController";

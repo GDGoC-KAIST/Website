@@ -1,6 +1,7 @@
 import {onRequest} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
 import {MemberService} from "../services/memberService";
+import {MemberRepository} from "../repositories/memberRepository";
 import {setCorsHeaders} from "../utils/cors";
 
 const memberService = new MemberService();
@@ -139,13 +140,14 @@ export const updateMember = onRequest(async (request, response) => {
       return;
     }
 
-    const {name, email, department, githubUsername} = request.body;
+    const {name, email, department, githubUsername, isAdmin} = request.body;
 
     const updateData: Partial<{
       name: string;
       email: string;
       department: string;
       githubUsername: string;
+      isAdmin: boolean;
     }> = {};
 
     if (name !== undefined) updateData.name = name;
@@ -160,6 +162,14 @@ export const updateMember = onRequest(async (request, response) => {
     }
     if (department !== undefined) updateData.department = department;
     if (githubUsername !== undefined) updateData.githubUsername = githubUsername;
+    if (isAdmin !== undefined) {
+      // isAdmin은 boolean 타입이어야 함
+      if (typeof isAdmin !== "boolean") {
+        response.status(400).json({error: "isAdmin must be a boolean"});
+        return;
+      }
+      updateData.isAdmin = isAdmin;
+    }
 
     const updatedMember = await memberService.updateMember(memberId, updateData);
 
@@ -202,6 +212,31 @@ export const deleteMember = onRequest(async (request, response) => {
     }
     logger.error("Error deleting member", error);
     response.status(500).json({error: "Failed to delete member"});
+  }
+});
+
+// 관리자 목록 조회
+export const getAdmins = onRequest(async (request, response) => {
+  setCorsHeaders(response);
+
+  if (handleOptions(response)) return;
+
+  if (request.method !== "GET") {
+    response.status(405).json({error: "Method not allowed"});
+    return;
+  }
+
+  try {
+    const memberRepo = new MemberRepository();
+    const admins = await memberRepo.findAdmins();
+
+    response.status(200).json({
+      admins,
+      count: admins.length,
+    });
+  } catch (error) {
+    logger.error("Error getting admins", error);
+    response.status(500).json({error: "Failed to get admins"});
   }
 });
 

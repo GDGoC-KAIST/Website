@@ -163,6 +163,110 @@ export const apiDocs = onRequest((request, response) => {
           responses: {"200": {description: "성공"}},
         },
       },
+      "/us-central1/loginWithGitHub": {
+        post: {
+          summary: "GitHub OAuth 로그인/회원가입",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["accessToken"],
+                  properties: {
+                    accessToken: {type: "string", description: "GitHub OAuth access token"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "로그인/회원가입 성공"}},
+        },
+      },
+      "/us-central1/getUser": {
+        get: {
+          summary: "사용자 정보 조회",
+          parameters: [{name: "userId", in: "query", required: true, schema: {type: "string"}}],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/checkApprovalStatus": {
+        get: {
+          summary: "승인 상태 확인",
+          parameters: [{name: "userId", in: "query", required: true, schema: {type: "string"}}],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/getPendingUsers": {
+        get: {
+          summary: "승인 대기 중인 사용자 목록 (관리자 전용)",
+          parameters: [
+            {name: "adminId", in: "query", required: true, schema: {type: "string"}},
+            {name: "limit", in: "query", schema: {type: "integer", default: 50}},
+            {name: "offset", in: "query", schema: {type: "integer", default: 0}},
+          ],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/approveUser": {
+        post: {
+          summary: "사용자 승인 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {type: "string", description: "승인할 사용자 ID"},
+                    adminId: {type: "string", description: "관리자 ID"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "승인 성공"}},
+        },
+      },
+      "/us-central1/rejectUser": {
+        post: {
+          summary: "사용자 거부 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {type: "string", description: "거부할 사용자 ID"},
+                    adminId: {type: "string", description: "관리자 ID"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "거부 성공"}},
+        },
+      },
+      "/us-central1/grantAdmin": {
+        post: {
+          summary: "관리자 권한 부여 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {type: "string", description: "관리자 권한을 부여할 사용자 ID"},
+                    adminId: {type: "string", description: "관리자 ID"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "권한 부여 성공"}},
+        },
+      },
     },
   };
 
@@ -506,6 +610,200 @@ export const apiSpec = onRequest((request, response) => {
           responses: {
             "200": {
               description: "성공",
+            },
+          },
+        },
+      },
+      "/loginWithGitHub": {
+        post: {
+          summary: "GitHub OAuth 로그인/회원가입",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["accessToken"],
+                  properties: {
+                    accessToken: {
+                      type: "string",
+                      description: "GitHub OAuth access token",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "로그인/회원가입 성공",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/getUser": {
+        get: {
+          summary: "사용자 정보 조회",
+          parameters: [
+            {
+              name: "userId",
+              in: "query",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/checkApprovalStatus": {
+        get: {
+          summary: "승인 상태 확인",
+          parameters: [
+            {
+              name: "userId",
+              in: "query",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/getPendingUsers": {
+        get: {
+          summary: "승인 대기 중인 사용자 목록 (관리자 전용)",
+          parameters: [
+            {
+              name: "adminId",
+              in: "query",
+              required: true,
+              schema: {type: "string"},
+            },
+            {
+              name: "limit",
+              in: "query",
+              schema: {type: "integer", default: 50},
+            },
+            {
+              name: "offset",
+              in: "query",
+              schema: {type: "integer", default: 0},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/approveUser": {
+        post: {
+          summary: "사용자 승인 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {
+                      type: "string",
+                      description: "승인할 사용자 ID",
+                    },
+                    adminId: {
+                      type: "string",
+                      description: "관리자 ID",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "승인 성공",
+            },
+          },
+        },
+      },
+      "/rejectUser": {
+        post: {
+          summary: "사용자 거부 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {
+                      type: "string",
+                      description: "거부할 사용자 ID",
+                    },
+                    adminId: {
+                      type: "string",
+                      description: "관리자 ID",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "거부 성공",
+            },
+          },
+        },
+      },
+      "/grantAdmin": {
+        post: {
+          summary: "관리자 권한 부여 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "adminId"],
+                  properties: {
+                    userId: {
+                      type: "string",
+                      description: "관리자 권한을 부여할 사용자 ID",
+                    },
+                    adminId: {
+                      type: "string",
+                      description: "관리자 ID",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "권한 부여 성공",
             },
           },
         },

@@ -75,5 +75,17 @@ export class MemberRepository {
   async delete(memberId: string): Promise<void> {
     await db.collection(MEMBERS_COLLECTION).doc(memberId).delete();
   }
+
+  // 관리자 멤버 목록 조회
+  async findAdmins(): Promise<MemberData[]> {
+    const snapshot = await db.collection(MEMBERS_COLLECTION)
+      .where("isAdmin", "==", true)
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as MemberData));
+  }
 }
 
