@@ -105,12 +105,36 @@ interface ListItemProps extends React.ComponentPropsWithoutRef<"li"> {
 
 const mainMenu: MenuItem[] = [
   {
-    title: "동아리 소개",
-    url: "/products", // Base URL for products
+    title: "About",
+    url: "/about", // Base URL for products
+    subMenu: [
+      {
+        title: "GDG on Campus KAIST",
+        url: "/",
+        description: "GDG on Campus KAIST를 소개합니다.",
+        icon: <University />,
+      },
+      {
+        title: "동아리원",
+        url: "/",
+        description: "",
+        icon: <Users />,
+      },
+      {
+        title: "동아리 연락처",
+        url: "/products/categories",
+        description: "",
+        icon: <Phone />,
+      },
+    ],
+  },
+  {
+    title: "Blog",
+    url: "/blog", // Base URL for products
     subMenu: [
       {
         title: "GDGoC KAIST",
-        url: "/products/all",
+        url: "/blog",
         description: "GDGoC KAIST를 소개합니다.",
         icon: <University />,
       },
@@ -129,12 +153,12 @@ const mainMenu: MenuItem[] = [
     ],
   },
   {
-    title: "프로젝트",
-    url: "/about",
+    title: "Members",
+    url: "/members",
     subMenu: [
       {
         title: "Our Story",
-        url: "/about/story",
+        url: "/members",
         description: "Learn about our mission and values.",
         icon: <BookOpen />,
       },
@@ -147,12 +171,12 @@ const mainMenu: MenuItem[] = [
     ],
   },
   {
-    title: "세미나",
-    url: "/support",
+    title: "Contact",
+    url: "/contact",
     subMenu: [
       {
         title: "Help Center",
-        url: "/support/help",
+        url: "/contact",
         description: "Find answers to common questions.",
         icon: <MessageCircle />,
       },
@@ -175,7 +199,7 @@ const mainMenu: MenuItem[] = [
 export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const {
-    domain = { name: "Bolt Stack" },
+    domain = { name: "GDG on Campus KAIST" },
     isSticky = true,
     authLinks,
     leftAddon,
@@ -184,7 +208,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
     ...props
   } = navBar2Props;
 
-  const defaultLogo = domain.logo || <MdElectricBolt size={26} />;
+  const defaultdomain = domain || <MdElectricBolt size={26} />;
   const [isClient, setIsClient] = React.useState(false);
   const defaultNavigationMenu = navigationMenu ?? mainMenu;
 
@@ -245,7 +269,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
     if (menuItem.subMenu && menuItem.subMenu.length > 0) {
       return (
         <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent">
+          <NavigationMenuTrigger className="bg-transparent text-[17px]">
             {menuItem.title}
           </NavigationMenuTrigger>
           <NavigationMenuContent>
@@ -274,20 +298,18 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
   };
 
   //Functional component to render the logo
-  const RenderNameAndLogo = ({
-    defaultLogo,
-  }: {
-    defaultLogo: React.ReactNode;
-  }) => {
+  const RenderNameAndLogo = ({ domain }: { domain: NavBar2Props<T>["domain"] }) => {
+  const logo = domain?.logo || <MdElectricBolt size={26} />;
+  const name = domain?.name || "GDG on Campus KAIST";
     return (
       <Link href={"/"}>
         <div className="flex justify-center   items-center gap-2 mt-[5px]">
-          {defaultLogo}
-          {typeof domain.name === "string" ? (
-            <h1 className="text-2xl font-bold max-md:hidden">{domain.name}</h1>
+          {logo}
+          {typeof name === "string" ? (
+            <h1 className="text-2xl font-bold max-md:hidden">{name}</h1>
           ) : (
             <div className="flex justify-center   items-center gap-2 mt-[5px]">
-              {domain.name}
+              {name}
             </div>
           )}
         </div>
@@ -309,7 +331,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
       } ${className}`}
     >
       {/* Logo  */}
-      <RenderNameAndLogo defaultLogo={defaultLogo} />
+      <RenderNameAndLogo domain={defaultdomain} />
       {/* Navigation menu */}
       <NavigationMenu viewport={false} className="max-lg:hidden mt-2 ">
         <NavigationMenuList>
@@ -325,7 +347,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
       {/* Mobile Menu */}
 
       <div>
-        <RenderMobileMenu defaultLogo={defaultLogo} />
+        <RenderMobileMenu domain={defaultdomain} />
         <div className="flex gap-2 items-center">
           {leftAddon && <div className="max-lg:hidden">{leftAddon}</div>}
           {/* Login Button */}
@@ -351,7 +373,9 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
     </nav>
   );
 
-  function RenderMobileMenu({ defaultLogo }: { defaultLogo: React.ReactNode }) {
+  function RenderMobileMenu({ domain }: { domain: NavBar2Props<T>["domain"] }) {
+    const logo = domain?.logo || <MdElectricBolt size={26} />;
+    const name = domain?.name || "GDG on Campus KAIST";
     return (
       <Sheet>
         <SheetTrigger asChild className="hidden max-lg:block">
@@ -362,7 +386,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
         <SheetContent className="">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-start gap-2">
-              {React.cloneElement(defaultLogo as React.ReactElement, {
+              {React.cloneElement(logo as React.ReactElement, {
                 size: "25",
               })}
               {/* <span>{domain.name}</span> */}
