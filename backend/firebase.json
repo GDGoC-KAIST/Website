@@ -35,7 +35,7 @@
     },
     "database": {
       "port": 9000,
-      "instance": "gdgoc-web-default-rtdb"
+      "instance": "website-default-rtdb"
     },
     "storage": {
       "port": 9199

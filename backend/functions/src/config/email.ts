@@ -80,9 +80,10 @@ export async function getAdminEmails(): Promise<string[]> {
 
 // 이메일 발송 기본 URL (프론트엔드 또는 백엔드)
 export const getBaseUrl = (): string => {
+  const projectId = process.env.GCLOUD_PROJECT || "website";
   if (process.env.FUNCTIONS_EMULATOR) {
-    return "http://localhost:5001/gdgoc-web/us-central1";
+    return `http://localhost:5001/${projectId}/us-central1`;
   }
-  return `https://us-central1-${process.env.GCLOUD_PROJECT || "gdgoc-web"}.cloudfunctions.net`;
+  return `https://us-central1-${projectId}.cloudfunctions.net`;
 };
 

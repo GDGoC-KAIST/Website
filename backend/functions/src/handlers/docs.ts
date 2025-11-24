@@ -1,7 +1,7 @@
 import {onRequest} from "firebase-functions/https";
 import {setCorsHeaders} from "../utils/cors";
 
-const projectId = "gdgoc-web";
+const projectId = process.env.GCLOUD_PROJECT || "website";
 
 // Swagger UI 테스트 페이지
 export const apiDocs = onRequest((request, response) => {
