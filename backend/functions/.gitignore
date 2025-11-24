@@ -10,4 +10,4 @@ node_modules/
 *.local
 
 # Environment variables (but allow .env.example)
-lib/.env
+.env
