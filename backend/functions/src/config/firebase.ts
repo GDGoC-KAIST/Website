@@ -7,14 +7,15 @@ if (process.env.FUNCTIONS_EMULATOR) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const dotenv = require("dotenv");
-    // lib/.env 경로 (컴파일된 파일 기준: lib/config/firebase.js -> lib/.env)
-    const envPath = path.join(__dirname, "../.env");
+    // backend/.env 경로 (컴파일된 파일 기준: lib/config/firebase.js -> backend/.env)
+    // lib/config -> lib -> functions -> backend
+    const envPath = path.join(__dirname, "../../.env");
     const result = dotenv.config({path: envPath});
     
     if (result.error) {
       console.warn("⚠️ .env file not found or error loading:", result.error.message);
-      console.warn(`   Expected location: ${envPath} (functions/lib/.env)`);
-      console.warn("   Create .env file in backend/functions/lib/.env");
+      console.warn(`   Expected location: ${envPath} (backend/.env)`);
+      console.warn("   Create .env file in backend/.env");
       console.warn("   See README.md for .env file format");
     } else {
       console.log("✅ .env file loaded successfully");
