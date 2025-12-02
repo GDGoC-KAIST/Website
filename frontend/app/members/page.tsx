@@ -1,74 +1,26 @@
-import ContentCards from "../component/content-cards";
-import { MdTravelExplore } from "react-icons/md";
+import {api} from "@/lib/api";
+import MemberListClient from "../components/members/MemberListClient";
 
-const cards = [
-  {
-    id: "1",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "2",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-  {
-    id: "3",
-    icon: <MdTravelExplore/>,
-    title: "Trip to Italy",
-    content: "Visited Rome and Venice. Amazing architecture!",
-    tags: ["Travel", "Europe"],
-  },
-];
-
-export default function Home() {
+export default async function MembersPage() {
+  const membersRes = await api.getMembers({limit: 50}).catch(() => ({data: []}));
+  const members = membersRes.data || [];
 
   return (
-    <div className='mt-32'>
-      <ContentCards
-        cards={cards}
-        gridLayout={true}
-      
-      />
+    <div className="px-6 py-16 lg:px-12">
+      <div className="mx-auto max-w-3xl text-center">
+        <p className="text-sm uppercase tracking-wide text-gray-500">Members</p>
+        <h1 className="mt-2 text-4xl font-semibold">
+          People of GDG on Campus KAIST
+        </h1>
+        <p className="mt-4 text-gray-600">
+          Designers, engineers, and community builders making this chapter
+          thrive.
+        </p>
+      </div>
+
+      <div className="mx-auto mt-12 max-w-6xl">
+        <MemberListClient initialMembers={members} />
+      </div>
     </div>
-  )
+  );
 }
