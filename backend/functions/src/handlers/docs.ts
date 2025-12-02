@@ -163,6 +163,106 @@ export const apiDocs = onRequest((request, response) => {
           responses: {"200": {description: "성공"}},
         },
       },
+      "/us-central1/getSeminars": {
+        get: {
+          summary: "세미나 목록 조회",
+          parameters: [
+            {name: "semester", in: "query", schema: {type: "string"}},
+            {name: "type", in: "query", schema: {type: "string", enum: ["invited", "internal"]}},
+            {name: "limit", in: "query", schema: {type: "integer", default: 10, maximum: 50}},
+            {name: "offset", in: "query", schema: {type: "integer", default: 0}},
+          ],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/getSeminar/{seminarId}": {
+        get: {
+          summary: "단일 세미나 조회",
+          parameters: [{name: "seminarId", in: "path", required: true, schema: {type: "string"}}],
+          responses: {"200": {description: "성공"}},
+        },
+      },
+      "/us-central1/createSeminar": {
+        post: {
+          summary: "세미나 생성 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId", "title", "summary", "semester", "type", "contentMd"],
+                  properties: {
+                    adminId: {type: "string", description: "관리자 ID"},
+                    title: {type: "string"},
+                    summary: {type: "string"},
+                    type: {type: "string", enum: ["invited", "internal"]},
+                    semester: {type: "string", description: "YYYY-1 or YYYY-2"},
+                    date: {type: "string", description: "YYYY-MM-DD"},
+                    speaker: {type: "string"},
+                    affiliation: {type: "string"},
+                    location: {type: "string"},
+                    contentMd: {type: "string", description: "Markdown content"},
+                    attachmentUrls: {type: "array", items: {type: "string"}},
+                    coverImageId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"201": {description: "세미나 생성 성공"}},
+        },
+      },
+      "/us-central1/updateSeminar/{seminarId}": {
+        put: {
+          summary: "세미나 업데이트 (관리자 전용)",
+          parameters: [{name: "seminarId", in: "path", required: true, schema: {type: "string"}}],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId"],
+                  properties: {
+                    adminId: {type: "string"},
+                    title: {type: "string"},
+                    summary: {type: "string"},
+                    type: {type: "string", enum: ["invited", "internal"]},
+                    semester: {type: "string"},
+                    date: {type: "string"},
+                    speaker: {type: "string"},
+                    affiliation: {type: "string"},
+                    location: {type: "string"},
+                    contentMd: {type: "string"},
+                    attachmentUrls: {type: "array", items: {type: "string"}},
+                    coverImageId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "세미나 업데이트 성공"}},
+        },
+      },
+      "/us-central1/deleteSeminar/{seminarId}": {
+        delete: {
+          summary: "세미나 삭제 (관리자 전용)",
+          parameters: [{name: "seminarId", in: "path", required: true, schema: {type: "string"}}],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId"],
+                  properties: {
+                    adminId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {"200": {description: "세미나 삭제 성공"}},
+        },
+      },
       "/us-central1/loginWithGitHub": {
         post: {
           summary: "GitHub OAuth 로그인/회원가입",
@@ -616,6 +716,162 @@ export const apiSpec = onRequest((request, response) => {
           },
         },
       },
+      "/getSeminars": {
+        get: {
+          summary: "세미나 목록 조회",
+          parameters: [
+            {name: "semester", in: "query", schema: {type: "string"}},
+            {name: "type", in: "query", schema: {type: "string", enum: ["invited", "internal"]}},
+            {name: "limit", in: "query", schema: {type: "integer", default: 10, maximum: 50}},
+            {name: "offset", in: "query", schema: {type: "integer", default: 0}},
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/getSeminar/{seminarId}": {
+        get: {
+          summary: "단일 세미나 조회",
+          parameters: [
+            {
+              name: "seminarId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "성공",
+            },
+          },
+        },
+      },
+      "/createSeminar": {
+        post: {
+          summary: "세미나 생성 (관리자 전용)",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId", "title", "summary", "semester", "type", "contentMd"],
+                  properties: {
+                    adminId: {
+                      type: "string",
+                      description: "관리자 ID",
+                    },
+                    title: {type: "string"},
+                    summary: {type: "string"},
+                    type: {
+                      type: "string",
+                      enum: ["invited", "internal"],
+                    },
+                    semester: {type: "string"},
+                    date: {type: "string"},
+                    speaker: {type: "string"},
+                    affiliation: {type: "string"},
+                    location: {type: "string"},
+                    contentMd: {type: "string"},
+                    attachmentUrls: {
+                      type: "array",
+                      items: {type: "string"},
+                    },
+                    coverImageId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "세미나 생성 성공",
+            },
+          },
+        },
+      },
+      "/updateSeminar/{seminarId}": {
+        put: {
+          summary: "세미나 업데이트 (관리자 전용)",
+          parameters: [
+            {
+              name: "seminarId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId"],
+                  properties: {
+                    adminId: {type: "string"},
+                    title: {type: "string"},
+                    summary: {type: "string"},
+                    type: {
+                      type: "string",
+                      enum: ["invited", "internal"],
+                    },
+                    semester: {type: "string"},
+                    date: {type: "string"},
+                    speaker: {type: "string"},
+                    affiliation: {type: "string"},
+                    location: {type: "string"},
+                    contentMd: {type: "string"},
+                    attachmentUrls: {
+                      type: "array",
+                      items: {type: "string"},
+                    },
+                    coverImageId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "세미나 업데이트 성공",
+            },
+          },
+        },
+      },
+      "/deleteSeminar/{seminarId}": {
+        delete: {
+          summary: "세미나 삭제 (관리자 전용)",
+          parameters: [
+            {
+              name: "seminarId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["adminId"],
+                  properties: {
+                    adminId: {type: "string"},
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "세미나 삭제 성공",
+            },
+          },
+        },
+      },
       "/loginWithGitHub": {
         post: {
           summary: "GitHub OAuth 로그인/회원가입",
@@ -815,4 +1071,3 @@ export const apiSpec = onRequest((request, response) => {
 
   response.status(200).json(spec);
 });
-

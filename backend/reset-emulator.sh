@@ -7,7 +7,7 @@ echo ""
 
 # 에뮬레이터가 실행 중인지 확인
 if ! lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null ; then
-  echo "⚠️  에뮬레이터가 실행 중이지 않습니다."
+  echo "에뮬레이터가 실행 중이지 않습니다."
   echo "먼저 에뮬레이터를 실행하세요: npx firebase emulators:start"
   exit 1
 fi
@@ -37,9 +37,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   RESPONSE=$(curl -s -X DELETE http://localhost:8080/emulator/v1/projects/gdgoc-web/databases/(default)/documents)
   
   if [ $? -eq 0 ]; then
-    echo "✅ 데이터 삭제 완료!"
+    echo "데이터 삭제 완료!"
   else
-    echo "❌ 데이터 삭제 실패"
+    echo "데이터 삭제 실패"
     echo "에뮬레이터가 실행 중인지 확인하세요."
   fi
 fi

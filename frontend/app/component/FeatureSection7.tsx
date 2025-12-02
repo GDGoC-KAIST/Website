@@ -1,8 +1,9 @@
 
 "use client";
 
-import React, { ReactNode, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import React, {ReactNode, useState} from "react";
+import {ChevronDown} from "lucide-react";
+import {Project, Seminar} from "@/lib/types";
 
 interface AccordionItem {
   id: string;
@@ -18,15 +19,21 @@ interface ImageItem {
   imageFitOptions?: "object-contain" | "object-cover" | "object-fill ";
 }
 
+export interface SeminarWithImage extends Seminar {
+  coverImageUrl?: string;
+}
+
 interface FeatureSection7Props {
   mainColor?: string;
   className?: string;
   sectionId?: string;
-  mainHeading?: { text: string | ReactNode; className?: string };
-  subHeading?: { text: string; className?: string };
+  mainHeading?: {text: string | ReactNode; className?: string};
+  subHeading?: {text: string; className?: string};
   accordionItems?: AccordionItem[];
   accordionPosition?: "left" | "right";
   images?: ImageItem[];
+  recentProjects?: Project[];
+  recentSeminars?: SeminarWithImage[];
 }
 
 const DEFAULT_ACCORDION_ITEMS: AccordionItem[] = [
@@ -100,27 +107,104 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
   accordionItems = DEFAULT_ACCORDION_ITEMS,
   images = DEFAULT_IMAGES,
   accordionPosition = "left",
+  recentProjects,
+  recentSeminars,
 }) => {
-  const { text: titleText, className: titleClassName = "" } = mainHeading;
-  const { text: descriptionText, className: descriptionClassName = "" } =
+  const {text: titleText, className: titleClassName = ""} = mainHeading;
+  const {text: descriptionText, className: descriptionClassName = ""} =
     subHeading;
 
-  const [openAccordion, setOpenAccordion] = useState<string | null>(
-    accordionItems[0]?.id || null
+  const fallbackAccordionItems = accordionItems;
+  const fallbackImages = images;
+
+  const hasSeminarData =
+    Array.isArray(recentSeminars) && recentSeminars.length > 0;
+  const hasProjectData =
+    Array.isArray(recentProjects) && recentProjects.length > 0;
+
+  const fallbackImageSrc = fallbackImages[0]?.src || "/gdgoc_icon.png";
+
+  const seminarAccordionItems: AccordionItem[] = hasSeminarData
+    ? recentSeminars!.map((seminar) => ({
+      id: `seminar-${seminar.id}`,
+      title: {text: seminar.title},
+      content: {text: seminar.summary},
+    }))
+    : fallbackAccordionItems;
+
+  const projectAccordionItems: AccordionItem[] = hasProjectData
+    ? recentProjects!.map((project) => ({
+      id: `project-${project.id}`,
+      title: {text: project.title},
+      content: {text: project.summary || project.description || ""},
+    }))
+    : fallbackAccordionItems;
+
+  const seminarImages: ImageItem[] = hasSeminarData
+    ? recentSeminars!.map((seminar, index) => ({
+      id: `seminar-image-${seminar.id}-${index}`,
+      src:
+        seminar.coverImageUrl ||
+        fallbackImages[index % fallbackImages.length]?.src ||
+        fallbackImageSrc,
+      alt: seminar.title,
+      imageFitOptions: "object-cover",
+    }))
+    : fallbackImages;
+
+  const projectImages: ImageItem[] = hasProjectData
+    ? recentProjects!.map((project, index) => ({
+      id: `project-image-${project.id}-${index}`,
+      src:
+        project.thumbnailUrl ||
+        fallbackImages[index % fallbackImages.length]?.src ||
+        fallbackImageSrc,
+      alt: project.title,
+      imageFitOptions: "object-cover",
+    }))
+    : fallbackImages;
+
+  const initialTab: "seminars" | "projects" = hasSeminarData
+    ? "seminars"
+    : hasProjectData
+      ? "projects"
+      : "seminars";
+
+  const initialAccordionItems =
+    initialTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
+
+  const [activeTab, setActiveTab] = useState<"seminars" | "projects">(
+    initialTab
   );
+  const [openAccordion, setOpenAccordion] = useState<string | null>(
+    initialAccordionItems[0]?.id || null
+  );
+
+  const activeAccordionItems =
+    activeTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
+  const activeImages =
+    activeTab === "seminars" ? seminarImages : projectImages;
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
   };
 
-  const colorStyle = mainColor ? { color: mainColor } : {};
-  const bgColorStyle = mainColor ? { backgroundColor: mainColor } : {};
+  const handleTabChange = (tab: "seminars" | "projects") => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    const nextItems =
+      tab === "seminars" ? seminarAccordionItems : projectAccordionItems;
+    setOpenAccordion(nextItems[0]?.id || null);
+  };
+
+  const colorStyle = mainColor ? {color: mainColor} : {};
+  const bgColorStyle = mainColor ? {backgroundColor: mainColor} : {};
 
   // Define the Accordion and Image components as separate variables
   const AccordionComponent = (
     <div className="space-y-1 min-h-[400px]  ">
       <div className="space-y-1">
-        {accordionItems.map((item) => (
+        {activeAccordionItems.map((item) => (
           <div key={item.id} className="relative">
             {/* Vertical Line */}
             <div
@@ -186,7 +270,7 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
 
   const ImageGridComponent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 lg:grid-rows-2 gap-4 h-[500px] max-lg:h-[800px] max-lg:pt-20">
-      {images.map((image, index) => (
+      {activeImages.map((image, index) => (
         <div
           key={image.id}
           className={`justify-content
@@ -232,6 +316,45 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
         {descriptionText}
       </p>
 
+      <div className="flex justify-center gap-4 pt-10">
+        <button
+          type="button"
+          onClick={() => handleTabChange("seminars")}
+          className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+            activeTab === "seminars"
+              ? mainColor
+                ? "text-white"
+                : "bg-primary border-primary text-white"
+              : "text-gray-500 border-gray-200 hover:border-gray-400"
+          }`}
+          style={
+            activeTab === "seminars" && mainColor
+              ? {backgroundColor: mainColor, borderColor: mainColor}
+              : undefined
+          }
+        >
+          Seminars
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTabChange("projects")}
+          className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+            activeTab === "projects"
+              ? mainColor
+                ? "text-white"
+                : "bg-primary border-primary text-white"
+              : "text-gray-500 border-gray-200 hover:border-gray-400"
+          }`}
+          style={
+            activeTab === "projects" && mainColor
+              ? {backgroundColor: mainColor, borderColor: mainColor}
+              : undefined
+          }
+        >
+          Projects
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-20 max-lg:gap-0 pt-24">
         {accordionPosition === "left" ? (
           <>
@@ -250,6 +373,5 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
 };
 
 export default FeatureSection7;
-
 
 

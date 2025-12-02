@@ -57,6 +57,25 @@ export {
 // 승인 처리 관련 함수들 (Controller)
 export {handleApproval} from "./controllers/approvalController";
 
+// 프로젝트 관련 함수들 (Controller)
+export {
+  createProject,
+  getProjects,
+  getProject,
+  updateProject,
+  deleteProject,
+  refreshProjectReadme,
+} from "./controllers/projectController";
+
+// 세미나 관련 함수들 (Controller)
+export {
+  createSeminar,
+  getSeminars,
+  getSeminar,
+  updateSeminar,
+  deleteSeminar,
+} from "./controllers/seminarController";
+
 // API 문서 관련 함수들
 export {apiDocs, apiSpec} from "./handlers/docs";
 
