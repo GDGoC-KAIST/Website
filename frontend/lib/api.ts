@@ -28,7 +28,7 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 
 export const api = {
   // Seminars
-  getSeminars: async (params?: {semester?: string; type?: string; limit?: number}) => {
+  getSeminars: async (params?: {semester?: string; type?: string; limit?: number; offset?: number}) => {
     const qs = new URLSearchParams(params as any).toString();
     const res = await fetchAPI<any>(`/getSeminars?${qs}`);
     return normalizeList<Seminar>(res);
@@ -36,7 +36,7 @@ export const api = {
   getSeminar: (id: string) => fetchAPI<Seminar>(`/getSeminar/${id}`),
 
   // Projects
-  getProjects: async (params?: {semester?: string; status?: string; limit?: number}) => {
+  getProjects: async (params?: {semester?: string; status?: string; limit?: number; offset?: number}) => {
     const qs = new URLSearchParams(params as any).toString();
     const res = await fetchAPI<any>(`/getProjects?${qs}`);
     return normalizeList<Project>(res);
@@ -44,7 +44,7 @@ export const api = {
   getProject: (id: string) => fetchAPI<Project>(`/getProject/${id}`),
 
   // Members
-  getMembers: async (params?: {limit?: number}) => {
+  getMembers: async (params?: {limit?: number; offset?: number}) => {
     const qs = new URLSearchParams(params as any).toString();
     const res = await fetchAPI<any>(`/getMembers?${qs}`);
     return normalizeList<Member>(res);

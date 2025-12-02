@@ -121,57 +121,69 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
     Array.isArray(recentSeminars) && recentSeminars.length > 0;
   const hasProjectData =
     Array.isArray(recentProjects) && recentProjects.length > 0;
+  const hasCustomAccordion = Array.isArray(accordionItems) && accordionItems.length > 0;
 
   const fallbackImageSrc = fallbackImages[0]?.src || "/gdgoc_icon.png";
 
-  const seminarAccordionItems: AccordionItem[] = hasSeminarData
-    ? recentSeminars!.map((seminar) => ({
-      id: `seminar-${seminar.id}`,
-      title: {text: seminar.title},
-      content: {text: seminar.summary},
-    }))
-    : fallbackAccordionItems;
+  const seminarAccordionItems: AccordionItem[] = hasCustomAccordion
+    ? fallbackAccordionItems
+    : hasSeminarData
+      ? recentSeminars!.map((seminar) => ({
+        id: `seminar-${seminar.id}`,
+        title: {text: seminar.title},
+        content: {text: seminar.summary},
+      }))
+      : fallbackAccordionItems;
 
-  const projectAccordionItems: AccordionItem[] = hasProjectData
-    ? recentProjects!.map((project) => ({
-      id: `project-${project.id}`,
-      title: {text: project.title},
-      content: {text: project.summary || project.description || ""},
-    }))
-    : fallbackAccordionItems;
-
-  const seminarImages: ImageItem[] = hasSeminarData
-    ? recentSeminars!.map((seminar, index) => ({
-      id: `seminar-image-${seminar.id}-${index}`,
-      src:
-        seminar.coverImageUrl ||
-        fallbackImages[index % fallbackImages.length]?.src ||
-        fallbackImageSrc,
-      alt: seminar.title,
-      imageFitOptions: "object-cover",
-    }))
-    : fallbackImages;
-
-  const projectImages: ImageItem[] = hasProjectData
-    ? recentProjects!.map((project, index) => ({
-      id: `project-image-${project.id}-${index}`,
-      src:
-        project.thumbnailUrl ||
-        fallbackImages[index % fallbackImages.length]?.src ||
-        fallbackImageSrc,
-      alt: project.title,
-      imageFitOptions: "object-cover",
-    }))
-    : fallbackImages;
-
-  const initialTab: "seminars" | "projects" = hasSeminarData
-    ? "seminars"
+  const projectAccordionItems: AccordionItem[] = hasCustomAccordion
+    ? fallbackAccordionItems
     : hasProjectData
-      ? "projects"
-      : "seminars";
+      ? recentProjects!.map((project) => ({
+        id: `project-${project.id}`,
+        title: {text: project.title},
+        content: {text: project.summary || project.description || ""},
+      }))
+      : fallbackAccordionItems;
 
-  const initialAccordionItems =
-    initialTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
+  const seminarImages: ImageItem[] = hasCustomAccordion
+    ? fallbackImages
+    : hasSeminarData
+      ? recentSeminars!.map((seminar, index) => ({
+        id: `seminar-image-${seminar.id}-${index}`,
+        src:
+          seminar.coverImageUrl ||
+          fallbackImages[index % fallbackImages.length]?.src ||
+          fallbackImageSrc,
+        alt: seminar.title,
+        imageFitOptions: "object-cover",
+      }))
+      : fallbackImages;
+
+  const projectImages: ImageItem[] = hasCustomAccordion
+    ? fallbackImages
+    : hasProjectData
+      ? recentProjects!.map((project, index) => ({
+        id: `project-image-${project.id}-${index}`,
+        src:
+          project.thumbnailUrl ||
+          fallbackImages[index % fallbackImages.length]?.src ||
+          fallbackImageSrc,
+        alt: project.title,
+        imageFitOptions: "object-cover",
+      }))
+      : fallbackImages;
+
+  const initialTab: "seminars" | "projects" = hasCustomAccordion
+    ? "seminars"
+    : hasSeminarData
+      ? "seminars"
+      : hasProjectData
+        ? "projects"
+        : "seminars";
+
+  const initialAccordionItems = hasCustomAccordion
+    ? fallbackAccordionItems
+    : initialTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
 
   const [activeTab, setActiveTab] = useState<"seminars" | "projects">(
     initialTab
@@ -180,10 +192,12 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
     initialAccordionItems[0]?.id || null
   );
 
-  const activeAccordionItems =
-    activeTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
-  const activeImages =
-    activeTab === "seminars" ? seminarImages : projectImages;
+  const activeAccordionItems = hasCustomAccordion
+    ? fallbackAccordionItems
+    : activeTab === "seminars" ? seminarAccordionItems : projectAccordionItems;
+  const activeImages = hasCustomAccordion
+    ? fallbackImages
+    : activeTab === "seminars" ? seminarImages : projectImages;
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
@@ -273,16 +287,16 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
       {activeImages.map((image, index) => (
         <div
           key={image.id}
-          className={`justify-content
+          className={`justify-content rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300
             ${index === 0 ? "lg:col-start-1 lg:row-start-1" : ""}
-            ${index === 1 ? "lg:col-start-1 lg:row-start-2 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300" : ""}
+            ${index === 1 ? "lg:col-start-1 lg:row-start-2" : ""}
             ${index === 2 ? "lg:col-start-2 lg:row-span-2 " : ""}
           `}
         >
           <img
             src={image.src}
             alt={image.alt}
-            className={`w-full h-full justify-content
+            className={`w-full h-full justify-content rounded-2xl
               ${image.imageFitOptions || "object-cover"}
               ${index === 1 ? "hover:scale-105 duration-500 transition-transform " : ""}
             
@@ -296,7 +310,7 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
   return (
     <section
       id={sectionId}
-      className={` px-10 py-20 max-[400px]:px-6 ${className}`}
+      className={` px-10 pt-32 pb-20 max-[400px]:px-6 ${className}`}
     >
       <div className="mb-8">
         {typeof titleText === "string" ? (
@@ -306,7 +320,9 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
             {titleText}
           </h1>
         ) : (
-          <>{titleText}</>
+          <div className={`text-4xl md:text-5xl max-w-5xl mx-auto lg:text-6xl font-light leading-tight mb-6 ${titleClassName}`}>
+            {titleText}
+          </div>
         )}
       </div>
 
@@ -316,44 +332,46 @@ const FeatureSection7: React.FC<FeatureSection7Props> = ({
         {descriptionText}
       </p>
 
-      <div className="flex justify-center gap-4 pt-10">
-        <button
-          type="button"
-          onClick={() => handleTabChange("seminars")}
-          className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
-            activeTab === "seminars"
-              ? mainColor
-                ? "text-white"
-                : "bg-primary border-primary text-white"
-              : "text-gray-500 border-gray-200 hover:border-gray-400"
-          }`}
-          style={
-            activeTab === "seminars" && mainColor
-              ? {backgroundColor: mainColor, borderColor: mainColor}
-              : undefined
-          }
-        >
-          Seminars
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabChange("projects")}
-          className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
-            activeTab === "projects"
-              ? mainColor
-                ? "text-white"
-                : "bg-primary border-primary text-white"
-              : "text-gray-500 border-gray-200 hover:border-gray-400"
-          }`}
-          style={
-            activeTab === "projects" && mainColor
-              ? {backgroundColor: mainColor, borderColor: mainColor}
-              : undefined
-          }
-        >
-          Projects
-        </button>
-      </div>
+      {!hasCustomAccordion && (
+        <div className="flex justify-center gap-4 pt-10">
+          <button
+            type="button"
+            onClick={() => handleTabChange("seminars")}
+            className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+              activeTab === "seminars"
+                ? mainColor
+                  ? "text-white"
+                  : "bg-primary border-primary text-white"
+                : "text-gray-500 border-gray-200 hover:border-gray-400"
+            }`}
+            style={
+              activeTab === "seminars" && mainColor
+                ? {backgroundColor: mainColor, borderColor: mainColor}
+                : undefined
+            }
+          >
+            Seminars
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("projects")}
+            className={`px-5 py-2 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+              activeTab === "projects"
+                ? mainColor
+                  ? "text-white"
+                  : "bg-primary border-primary text-white"
+                : "text-gray-500 border-gray-200 hover:border-gray-400"
+            }`}
+            style={
+              activeTab === "projects" && mainColor
+                ? {backgroundColor: mainColor, borderColor: mainColor}
+                : undefined
+            }
+          >
+            Projects
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_2fr] gap-20 max-lg:gap-0 pt-24">
         {accordionPosition === "left" ? (

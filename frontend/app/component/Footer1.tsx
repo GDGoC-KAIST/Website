@@ -126,13 +126,13 @@ export default function Footer1({
       px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 mt-10 ${classname || ""}`}
     >
       {/* Main content section */}
-      <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12 mb-6 sm:mb-8 lg:mb-10">
+      <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12 mb-2 sm:mb-3">
         <LeftSection />
         <RightSection />
       </div>
 
       {/* Separator */}
-      <Separator className="h-[1px] my-4" />
+      <Separator className="h-[1px] my-2" />
 
       {/* Bottom section */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 text-xs sm:text-sm">

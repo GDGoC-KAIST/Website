@@ -386,9 +386,11 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
         <SheetContent className="">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-start gap-2">
-              {React.cloneElement(logo as React.ReactElement, {
-                size: "25",
-              })}
+              {React.isValidElement(logo)
+                ? React.cloneElement(logo as React.ReactElement<any>, {
+                    size: 25,
+                  })
+                : logo}
               {/* <span>{domain.name}</span> */}
             </SheetTitle>
           </SheetHeader>
@@ -418,7 +420,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
                               <div className="text-sm">
                                 {React.isValidElement(subMenuItem.icon)
                                   ? React.cloneElement(
-                                      subMenuItem.icon as React.ReactElement,
+                                      subMenuItem.icon as React.ReactElement<any>,
                                       {
                                         size: 17,
                                         className: "text-muted-foreground",

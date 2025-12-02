@@ -468,7 +468,7 @@ const PostsList = ({
     isVisible: boolean;
     placeholder: string;
     searchClassName: string;
-    inputRef: React.RefObject<HTMLInputElement>;
+    inputRef: React.RefObject<HTMLInputElement | null>;
     clearInputText: () => void;
     postsNotFoundText: string;
   };
