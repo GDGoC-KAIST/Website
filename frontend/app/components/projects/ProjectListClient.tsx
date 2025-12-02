@@ -1,6 +1,7 @@
 "use client";
 
 import {useMemo, useState} from "react";
+import Link from "next/link";
 import {api} from "@/lib/api";
 import type {Project, ProjectStatus} from "@/lib/types";
 
@@ -106,9 +107,10 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => (
-            <article
+            <Link
               key={project.id}
-              className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+              href={`/projects/${project.id}`}
+              className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md cursor-pointer"
             >
               {project.thumbnailUrl ? (
                 <div className="h-48 w-full overflow-hidden bg-gray-100">
@@ -153,14 +155,8 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
                     </span>
                   )}
                 </div>
-                <a
-                  href={`/projects/${project.id}`}
-                  className="mt-auto text-sm font-semibold text-primary hover:underline"
-                >
-                  View Details →
-                </a>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}

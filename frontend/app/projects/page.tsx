@@ -1,5 +1,6 @@
 import {api} from "@/lib/api";
 import ProjectListClient from "../components/projects/ProjectListClient";
+import NewProjectButton from "./NewProjectButton";
 
 export default async function ProjectsPage() {
   const projectsRes = await api
@@ -21,6 +22,9 @@ export default async function ProjectsPage() {
       </div>
 
       <div className="mx-auto mt-12 max-w-6xl">
+        <div className="flex justify-end mb-6">
+          <NewProjectButton />
+        </div>
         <ProjectListClient initialProjects={projects} />
       </div>
     </div>

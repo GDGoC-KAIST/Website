@@ -78,13 +78,29 @@ export class ProjectService {
       }
     }
 
-    const newProject: Omit<ProjectDoc, "id"> = {
-      ...projectData,
-      readmeContent,
-      readmeFetchedAt,
+    // undefined 값을 제거한 프로젝트 데이터 생성
+    const cleanProjectData: any = {
+      title: projectData.title,
+      summary: projectData.summary,
+      semester: projectData.semester,
+      status: projectData.status,
+      teamMembers: projectData.teamMembers,
+      techStack: projectData.techStack,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
+
+    // Optional 필드들 추가 (undefined가 아닌 경우만)
+    if (projectData.description !== undefined) cleanProjectData.description = projectData.description;
+    if (projectData.githubUrl !== undefined) cleanProjectData.githubUrl = projectData.githubUrl;
+    if (projectData.demoUrl !== undefined) cleanProjectData.demoUrl = projectData.demoUrl;
+    if (projectData.thumbnailUrl !== undefined) cleanProjectData.thumbnailUrl = projectData.thumbnailUrl;
+    if (projectData.contentMd !== undefined) cleanProjectData.contentMd = projectData.contentMd;
+    if (readmeContent !== undefined) cleanProjectData.readmeContent = readmeContent;
+    if (readmeFetchedAt !== undefined) cleanProjectData.readmeFetchedAt = readmeFetchedAt;
+    if (projectData.createdBy !== undefined) cleanProjectData.createdBy = projectData.createdBy;
+
+    const newProject: Omit<ProjectDoc, "id"> = cleanProjectData;
 
     const id = await this.projectRepo.create(newProject);
 
@@ -151,10 +167,25 @@ export class ProjectService {
       throw new Error("Invalid status. Must be 'ongoing' or 'completed'");
     }
 
+    // undefined 값을 제거한 업데이트 데이터 생성
     const updatePayload: Partial<ProjectDoc> = {
-      ...updateData,
       updatedAt: Timestamp.now(),
     };
+
+    // undefined가 아닌 필드만 추가
+    if (updateData.title !== undefined) updatePayload.title = updateData.title;
+    if (updateData.summary !== undefined) updatePayload.summary = updateData.summary;
+    if (updateData.description !== undefined) updatePayload.description = updateData.description;
+    if (updateData.semester !== undefined) updatePayload.semester = updateData.semester;
+    if (updateData.status !== undefined) updatePayload.status = updateData.status;
+    if (updateData.githubUrl !== undefined) updatePayload.githubUrl = updateData.githubUrl;
+    if (updateData.demoUrl !== undefined) updatePayload.demoUrl = updateData.demoUrl;
+    if (updateData.thumbnailUrl !== undefined) updatePayload.thumbnailUrl = updateData.thumbnailUrl;
+    if (updateData.teamMembers !== undefined) updatePayload.teamMembers = updateData.teamMembers;
+    if (updateData.techStack !== undefined) updatePayload.techStack = updateData.techStack;
+    if (updateData.contentMd !== undefined) updatePayload.contentMd = updateData.contentMd;
+    if (updateData.readmeContent !== undefined) updatePayload.readmeContent = updateData.readmeContent;
+    if (updateData.readmeFetchedAt !== undefined) updatePayload.readmeFetchedAt = updateData.readmeFetchedAt;
 
     // GitHub URL이 변경된 경우 README 다시 가져오기
     if (updateData.githubUrl && updateData.githubUrl !== existingProject.githubUrl) {

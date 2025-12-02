@@ -8,10 +8,6 @@ import { Heart } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   FaInstagram,
-  FaYoutube,
-  FaFacebook,
-  FaTwitter,
-  FaLinkedin,
 } from "react-icons/fa";
 import { IconType } from "react-icons/lib";
 
@@ -25,11 +21,7 @@ interface FooterNavigation {
 }
 
 const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
-  { href: "#", icon: FaInstagram },
-  { href: "#", icon: FaYoutube },
-  { href: "#", icon: FaFacebook },
-  { href: "#", icon: FaTwitter },
-  { href: "#", icon: FaLinkedin },
+  { href: "https://www.instagram.com/gdg.on.campus_kaist/", icon: FaInstagram },
 ];
 
 const DEFAULT_FOOTER_NAVIGATION: FooterNavigation = {
@@ -43,7 +35,7 @@ const DEFAULT_FOOTER_NAVIGATION: FooterNavigation = {
     { label: "Profile", href: "#" },
     { label: "Members", href: "#" },
     { label: "News", href: "#" },
-    { label: "Jobs", href: "#" },
+    { label: "Jobs", href: "https://linktr.ee/helloworldgdgockaist" },
   ],
 };
 
@@ -79,8 +71,10 @@ export default function Footer1({
             <a
               key={index}
               href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
               className="hover:opacity-75 transition-opacity duration-200"
-              aria-label={`Social link ${index + 1}`}
+              aria-label="Instagram"
             >
               <link.icon className="h-5 w-5 sm:h-6 sm:w-6" />
             </a>

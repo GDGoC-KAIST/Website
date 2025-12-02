@@ -33,8 +33,10 @@ export interface Project {
   teamMembers: string[];
   techStack: string[];
   readmeContent?: string;
+  contentMd?: string;
   createdAt?: number;
   updatedAt?: number;
+  createdBy?: string;
 }
 
 export interface Member {

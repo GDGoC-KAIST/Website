@@ -1,5 +1,6 @@
 import {api} from "@/lib/api";
 import SeminarListClient, {SeminarWithImage} from "./SeminarListClient";
+import NewSeminarButton from "./NewSeminarButton";
 
 export default async function SeminarsPage() {
   const seminarsRes = await api
@@ -49,6 +50,9 @@ export default async function SeminarsPage() {
       </div>
 
       <div className="mx-auto mt-12 max-w-6xl">
+        <div className="flex justify-end mb-6">
+          <NewSeminarButton />
+        </div>
         <SeminarListClient initialSeminars={seminarsWithImages} />
       </div>
     </div>

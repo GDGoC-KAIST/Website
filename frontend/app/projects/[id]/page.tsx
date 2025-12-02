@@ -2,29 +2,39 @@ import Link from "next/link";
 import {notFound} from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {api} from "@/lib/api";
+import ProjectActions from "./ProjectActions";
 
 interface ProjectDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ProjectDetailPage({params}: ProjectDetailPageProps) {
-  const {id} = params;
+  const resolvedParams = await params;
+  const {id} = resolvedParams;
+
+  if (!id) {
+    console.error("Project ID is missing from params");
+    notFound();
+  }
 
   let project;
   try {
     project = await api.getProject(id);
   } catch (error) {
-    console.error("Failed to fetch project", error);
+    console.error("Failed to fetch project", {id, error});
     notFound();
   }
 
   if (!project) {
+    console.error("Project not found", {id});
     notFound();
   }
 
+  // contentMd가 있으면 우선 사용, 없으면 readmeContent, 없으면 description
   const content =
+    project.contentMd ||
     project.readmeContent ||
     project.description ||
     "No description available at the moment.";
@@ -40,17 +50,20 @@ export default async function ProjectDetailPage({params}: ProjectDetailPageProps
         </Link>
 
         <header className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-gray-500">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                project.status === "ongoing"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-200 text-gray-600"
-              }`}
-            >
-              {project.status}
-            </span>
-            <span>{project.semester}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-gray-500">
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  project.status === "ongoing"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {project.status}
+              </span>
+              <span>{project.semester}</span>
+            </div>
+            <ProjectActions projectId={id} project={project} />
           </div>
           <div>
             <h1 className="text-4xl font-semibold text-gray-900">

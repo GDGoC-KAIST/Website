@@ -44,6 +44,7 @@ export {
   loginWithGitHub,
   getUser,
   checkApprovalStatus,
+  getApprovedUsers,
 } from "./controllers/authController";
 
 // 관리자 관련 함수들 (Controller)

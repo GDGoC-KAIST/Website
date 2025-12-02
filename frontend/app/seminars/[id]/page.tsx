@@ -2,25 +2,33 @@ import Link from "next/link";
 import {notFound} from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import {api} from "@/lib/api";
+import SeminarActions from "./SeminarActions";
 
 interface SeminarDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function SeminarDetailPage({params}: SeminarDetailPageProps) {
-  const {id} = params;
+  const resolvedParams = await params;
+  const {id} = resolvedParams;
+
+  if (!id) {
+    console.error("Seminar ID is missing from params");
+    notFound();
+  }
 
   let seminar;
   try {
     seminar = await api.getSeminar(id);
   } catch (error) {
-    console.error("Failed to fetch seminar", error);
+    console.error("Failed to fetch seminar", {id, error});
     notFound();
   }
 
   if (!seminar) {
+    console.error("Seminar not found", {id});
     notFound();
   }
 
@@ -52,17 +60,22 @@ export default async function SeminarDetailPage({params}: SeminarDetailPageProps
           ← Back to seminars
         </Link>
         <div>
-          <p className="text-xs uppercase tracking-widest text-gray-500">
-            {seminar.type} · {seminar.semester}
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold text-gray-900">
-            {seminar.title}
-          </h1>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
-            {formattedDate && <span>{formattedDate}</span>}
-            {seminar.speaker && <span>Speaker: {seminar.speaker}</span>}
-            {seminar.affiliation && <span>Affiliation: {seminar.affiliation}</span>}
-            {seminar.location && <span>Location: {seminar.location}</span>}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-gray-500">
+                {seminar.type} · {seminar.semester}
+              </p>
+              <h1 className="mt-2 text-4xl font-semibold text-gray-900">
+                {seminar.title}
+              </h1>
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
+                {formattedDate && <span>{formattedDate}</span>}
+                {seminar.speaker && <span>Speaker: {seminar.speaker}</span>}
+                {seminar.affiliation && <span>Affiliation: {seminar.affiliation}</span>}
+                {seminar.location && <span>Location: {seminar.location}</span>}
+              </div>
+            </div>
+            <SeminarActions seminarId={id} seminar={seminar} />
           </div>
         </div>
 

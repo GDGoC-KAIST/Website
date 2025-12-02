@@ -198,6 +198,7 @@ const mainMenu: MenuItem[] = [
 
 export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const {
     domain = { name: "GDG on Campus KAIST" },
     isSticky = true,
@@ -214,7 +215,35 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
 
   React.useEffect(() => {
     setIsClient(true);
+    // 로그인 상태 확인
+    const checkLoginStatus = () => {
+      const user = localStorage.getItem("user");
+      setIsLoggedIn(!!user);
+    };
+    
+    checkLoginStatus();
+    
+    // storage 이벤트 리스너 추가 (다른 탭에서 로그인/로그아웃 시)
+    window.addEventListener("storage", checkLoginStatus);
+    // 커스텀 이벤트 리스너 추가 (같은 탭에서 로그인/로그아웃 시)
+    window.addEventListener("login", checkLoginStatus);
+    window.addEventListener("logout", checkLoginStatus);
+    
+    return () => {
+      window.removeEventListener("storage", checkLoginStatus);
+      window.removeEventListener("login", checkLoginStatus);
+      window.removeEventListener("logout", checkLoginStatus);
+    };
   }, []);
+
+  // 로그아웃 함수
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    // 로그아웃 이벤트 발생
+    window.dispatchEvent(new Event("logout"));
+    window.location.href = "/";
+  };
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -236,6 +265,26 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
 
   const { login = {} } = authLinks || {};
   const { register = {} } = authLinks || {};
+  
+  // 로그인 상태에 따라 버튼 속성 동적 변경
+  const loginButtonProps = isLoggedIn
+    ? {
+        className: login.className || "border-2 font-semibold",
+        isVisible: true,
+        onClick: handleLogout,
+        text: "Log out",
+        urlLink: undefined as never,
+        variant: login.variant || "outline" as ButtonVariant,
+      }
+    : {
+        className: login.className || "border-2 font-semibold",
+        isVisible: login.isVisible || false,
+        onClick: login.onClick,
+        text: login.text || "Sign in",
+        urlLink: login.urlLink || "/login",
+        variant: login.variant || "outline" as ButtonVariant,
+      };
+
   const {
     className: loginClassName = "",
     isVisible: isLoginVisbile = false,
@@ -243,7 +292,7 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
     text: loginText = "Login",
     urlLink: urlLoginUrl = "",
     variant: loginVariant = "ghost",
-  } = login;
+  } = loginButtonProps;
 
   const {
     className: registerClassName = "",
@@ -301,8 +350,19 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
   const RenderNameAndLogo = ({ domain }: { domain: NavBar2Props<T>["domain"] }) => {
   const logo = domain?.logo || <MdElectricBolt size={26} />;
   const name = domain?.name || "GDG on Campus KAIST";
+  
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.location.pathname === "/") {
+      e.preventDefault();
+      const element = document.getElementById("about");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+  
     return (
-      <Link href={"/"}>
+      <Link href="/#about" onClick={handleHomeClick}>
         <div className="flex justify-center   items-center gap-2 mt-[5px]">
           {logo}
           {typeof name === "string" ? (
@@ -411,10 +471,28 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
                       </AccordionTrigger>
                       <AccordionContent className="pb-4">
                         <div className="space-y-2">
-                          {mainMenuItem.subMenu.map((subMenuItem) => (
+                          {mainMenuItem.subMenu.map((subMenuItem) => {
+                            const handleSubMenuClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                              const url = subMenuItem.url || "";
+                              if (url.includes("#")) {
+                                e.preventDefault();
+                                const hash = url.split("#")[1];
+                                const element = document.getElementById(hash);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }
+                                // 홈 페이지가 아닌 경우 홈으로 이동 후 스크롤
+                                if (window.location.pathname !== "/") {
+                                  window.location.href = url;
+                                }
+                              }
+                            };
+                            
+                            return (
                             <Link
                               key={subMenuItem.title}
                               href={subMenuItem.url || ""}
+                              onClick={handleSubMenuClick}
                               className=" p-2 flex items-center gap-4 rounded-md hover:bg-accent text-sm"
                             >
                               <div className="text-sm">
@@ -439,7 +517,8 @@ export function NavBar2<T extends MenuItem>(navBar2Props: NavBar2Props<T>) {
                                 )}
                               </div>
                             </Link>
-                          ))}
+                            );
+                          })}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -546,7 +625,20 @@ function ListItem({
   href,
   ...props
 }: ListItemProps) {
-  console.log(icon);
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (href.includes("#")) {
+      e.preventDefault();
+      const hash = href.split("#")[1];
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      // 홈 페이지가 아닌 경우 홈으로 이동 후 스크롤
+      if (window.location.pathname !== "/") {
+        window.location.href = href;
+      }
+    }
+  };
 
   return (
     <li {...props}>
@@ -554,6 +646,7 @@ function ListItem({
       <NavigationMenuLink asChild>
         <Link
           href={href}
+          onClick={handleClick}
           className="block   select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none 
           transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
         >

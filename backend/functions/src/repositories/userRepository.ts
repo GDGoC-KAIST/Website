@@ -56,6 +56,21 @@ export class UserRepository {
     } as UserData));
   }
 
+  // 승인된 사용자 목록 조회
+  async findApprovedUsers(limit: number = 100, offset: number = 0): Promise<UserData[]> {
+    const snapshot = await db.collection(USERS_COLLECTION)
+      .where("status", "==", UserStatus.APPROVED)
+      .orderBy("createdAt", "asc")
+      .limit(limit)
+      .offset(offset)
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as UserData));
+  }
+
   // 사용자 업데이트
   async update(userId: string, updateData: Partial<UserData>): Promise<UserData> {
     await db.collection(USERS_COLLECTION)

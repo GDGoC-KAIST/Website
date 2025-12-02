@@ -27,9 +27,13 @@ export interface ProjectDoc {
   readmeContent?: string; // Raw Markdown fetched from GitHub
   readmeFetchedAt?: Timestamp; // When README was last fetched
 
+  // User Content
+  contentMd?: string; // User-written Markdown content
+
   // System
   createdAt?: Timestamp; // Timestamp
   updatedAt?: Timestamp;
+  createdBy?: string; // User ID who created this project
 }
 
 export const PROJECTS_COLLECTION = "projects";

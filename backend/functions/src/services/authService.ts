@@ -88,13 +88,21 @@ export class AuthService {
     let user = await this.userRepo.findByGithubId(String(githubUser.id));
 
     if (user) {
-      // 기존 사용자 - 프로필 정보 업데이트
+      // 기존 사용자 - 프로필 정보만 업데이트 (상태는 유지)
+      // 이미 APPROVED된 사용자는 바로 로그인, PENDING/REJECTED는 상태 유지
       const updated = await this.userRepo.update(user.id!, {
         githubUsername: githubUser.login,
         email: githubUser.email || user.email,
         name: githubUser.name || githubUser.login,
         profileImageUrl: githubUser.avatar_url,
         updatedAt: Timestamp.now(),
+        // status는 변경하지 않음 (기존 상태 유지)
+      });
+
+      logger.info("Existing user logged in", {
+        userId: user.id,
+        status: updated.status,
+        githubUsername: githubUser.login,
       });
 
       return {
@@ -102,26 +110,44 @@ export class AuthService {
         isNewUser: false,
       };
     } else {
-      // 신규 사용자 - 회원가입 신청 (pending 상태)
+      // 신규 사용자 - 회원가입 신청
+      // 특정 이메일은 자동 승인
+      const autoApproveEmails = ["hbg1345@gmail.com"];
+      const shouldAutoApprove = githubUser.email && autoApproveEmails.includes(githubUser.email);
+      
       const newUser: Omit<UserData, "id"> = {
         githubId: String(githubUser.id),
         githubUsername: githubUser.login,
         email: githubUser.email || "",
         name: githubUser.name || githubUser.login,
         profileImageUrl: githubUser.avatar_url,
-        status: UserStatus.PENDING,
+        status: shouldAutoApprove ? UserStatus.APPROVED : UserStatus.PENDING,
         isAdmin: false,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
+        ...(shouldAutoApprove && {
+          approvedAt: Timestamp.now(),
+          approvedBy: "system",
+        }),
       };
 
       const id = await this.userRepo.create(newUser);
 
-      logger.info("New user registration request", {id, githubUsername: githubUser.login});
+      if (shouldAutoApprove) {
+        logger.info("New user auto-approved", {
+          id,
+          githubUsername: githubUser.login,
+          email: githubUser.email,
+        });
+      } else {
+        logger.info("New user registration request", {id, githubUsername: githubUser.login});
+      }
 
-      // 관리자들에게 이메일 발송
-      // 사용자 이메일이 없어도 관리자에게는 이메일 발송 (관리자 이메일은 있으므로)
-      try {
+      // 자동 승인된 사용자는 관리자 이메일 발송하지 않음
+      if (!shouldAutoApprove) {
+        // 관리자들에게 이메일 발송
+        // 사용자 이메일이 없어도 관리자에게는 이메일 발송 (관리자 이메일은 있으므로)
+        try {
         const approveToken = await generateApprovalToken(id, "approve");
         const rejectToken = await generateApprovalToken(id, "reject");
         const baseUrl = getBaseUrl();
@@ -151,17 +177,18 @@ export class AuthService {
           return sendEmail(emailOptions);
         });
 
-        await Promise.all(emailPromises);
-        logger.info("Registration request emails sent to admins successfully", {
-          adminEmails,
-          count: adminEmails.length,
-        });
-      } catch (error) {
-        logger.error("Failed to send registration email", {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-        // 이메일 발송 실패해도 사용자 생성은 성공으로 처리
+          await Promise.all(emailPromises);
+          logger.info("Registration request emails sent to admins successfully", {
+            adminEmails,
+            count: adminEmails.length,
+          });
+        } catch (error) {
+          logger.error("Failed to send registration email", {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          // 이메일 발송 실패해도 사용자 생성은 성공으로 처리
+        }
       }
 
       return {
@@ -189,6 +216,11 @@ export class AuthService {
   async isApprovedUser(userId: string): Promise<boolean> {
     const user = await this.userRepo.findById(userId);
     return user?.status === UserStatus.APPROVED || false;
+  }
+
+  // 승인된 사용자 목록 조회
+  async getApprovedUsers(limit: number = 100, offset: number = 0): Promise<UserData[]> {
+    return await this.userRepo.findApprovedUsers(limit, offset);
   }
 }
 

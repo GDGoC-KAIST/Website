@@ -47,11 +47,29 @@ export class SeminarService {
     await this.validateCoverImage(seminarData.coverImageId);
 
     const now = Date.now();
-    const newSeminar: Omit<SeminarDoc, "id"> = {
-      ...seminarData,
+    
+    // undefined 값을 제거한 세미나 데이터 생성
+    const cleanSeminarData: any = {
+      title: seminarData.title,
+      summary: seminarData.summary,
+      type: seminarData.type,
+      semester: seminarData.semester,
+      contentMd: seminarData.contentMd,
       createdAt: now,
       updatedAt: now,
     };
+
+    // Optional 필드들 추가 (undefined가 아닌 경우만)
+    if (seminarData.date !== undefined) cleanSeminarData.date = seminarData.date;
+    if (seminarData.speaker !== undefined) cleanSeminarData.speaker = seminarData.speaker;
+    if (seminarData.affiliation !== undefined) cleanSeminarData.affiliation = seminarData.affiliation;
+    if (seminarData.location !== undefined) cleanSeminarData.location = seminarData.location;
+    if (seminarData.attachmentUrls !== undefined) cleanSeminarData.attachmentUrls = seminarData.attachmentUrls;
+    if (seminarData.coverImageId !== undefined) cleanSeminarData.coverImageId = seminarData.coverImageId;
+    if (seminarData.createdBy !== undefined) cleanSeminarData.createdBy = seminarData.createdBy;
+    if (seminarData.updatedBy !== undefined) cleanSeminarData.updatedBy = seminarData.updatedBy;
+
+    const newSeminar: Omit<SeminarDoc, "id"> = cleanSeminarData;
 
     const id = await this.seminarRepo.create(newSeminar);
 
@@ -110,10 +128,24 @@ export class SeminarService {
       await this.validateCoverImage(updateData.coverImageId);
     }
 
+    // undefined 값을 제거한 업데이트 데이터 생성
     const payload: Partial<SeminarDoc> = {
-      ...updateData,
       updatedAt: Date.now(),
     };
+
+    // undefined가 아닌 필드만 추가
+    if (updateData.title !== undefined) payload.title = updateData.title;
+    if (updateData.summary !== undefined) payload.summary = updateData.summary;
+    if (updateData.type !== undefined) payload.type = updateData.type;
+    if (updateData.semester !== undefined) payload.semester = updateData.semester;
+    if (updateData.date !== undefined) payload.date = updateData.date;
+    if (updateData.speaker !== undefined) payload.speaker = updateData.speaker;
+    if (updateData.affiliation !== undefined) payload.affiliation = updateData.affiliation;
+    if (updateData.location !== undefined) payload.location = updateData.location;
+    if (updateData.contentMd !== undefined) payload.contentMd = updateData.contentMd;
+    if (updateData.attachmentUrls !== undefined) payload.attachmentUrls = updateData.attachmentUrls;
+    if (updateData.coverImageId !== undefined) payload.coverImageId = updateData.coverImageId;
+    if (updateData.updatedBy !== undefined) payload.updatedBy = updateData.updatedBy;
 
     return await this.seminarRepo.update(seminarId, payload);
   }

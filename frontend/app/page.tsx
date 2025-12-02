@@ -1,6 +1,7 @@
 
 import {api} from "@/lib/api";
 import FeatureSection7, {SeminarWithImage} from "./component/FeatureSection7";
+import MembersSection from "./component/MembersSection";
 
 export default async function Home() {
   const [projectsRes, seminarsRes] = await Promise.all([
@@ -110,8 +111,9 @@ export default async function Home() {
 
   return (
     <div>
-      <FeatureSection7
-        mainHeading={{
+      <div id="about">
+        <FeatureSection7
+          mainHeading={{
           text: (
             <div className="flex items-center justify-center gap-4 animate-fade-in-up">
               <img 
@@ -126,9 +128,11 @@ export default async function Home() {
         subHeading={{text: "KAIST의 구성원들이 함께 성장할 수 있는 개발자 커뮤니티"}}
         accordionItems={aboutAccordionItems}
         images={aboutImages}
-        recentProjects={projects}
-        recentSeminars={seminarsWithImages}
-      />
+          recentProjects={projects}
+          recentSeminars={seminarsWithImages}
+        />
+      </div>
+      <MembersSection />
     </div>
   );
 }

@@ -21,93 +21,33 @@ import {
 const customMenuItems = [
   {
     title: "About",
-    url: "/about", // Base URL for products
+    url: "/about",
     subMenu: [
       {
         title: "GDG on Campus KAIST",
-        url: "/",
+        url: "/#about",
         description: "GDG on Campus KAIST를 소개합니다.",
         icon: <University />,
       },
       {
         title: "동아리원",
-        url: "/",
+        url: "/#members",
         description: "",
         icon: <Users />,
-      },
-      {
-        title: "동아리 연락처",
-        url: "/products/categories",
-        description: "",
-        icon: <Phone />,
       },
     ],
   },
   {
-    title: "Blog",
-    url: "/blog", // Base URL for products
-    subMenu: [
-      {
-        title: "GDGoC KAIST",
-        url: "/blog",
-        description: "GDGoC KAIST를 소개합니다.",
-        icon: <University />,
-      },
-      {
-        title: "동아리원",
-        url: "/products/new",
-        description: "",
-        icon: <Users />,
-      },
-      {
-        title: "동아리 연락처",
-        url: "/products/categories",
-        description: "",
-        icon: <Phone />,
-      },
-    ],
+    title: "Projects",
+    url: "/projects",
   },
   {
-    title: "Members",
-    url: "/members",
-    subMenu: [
-      {
-        title: "Our Story",
-        url: "/members",
-        description: "Learn about our mission and values.",
-        icon: <BookOpen />,
-      },
-      {
-        title: "Team",
-        url: "/about/team",
-        description: "Meet the people behind our success.",
-        icon: <Users />,
-      },
-    ],
+    title: "Seminars",
+    url: "/seminars",
   },
   {
     title: "Contact",
     url: "/contact",
-    subMenu: [
-      {
-        title: "Help Center",
-        url: "/contact",
-        description: "Find answers to common questions.",
-        icon: <MessageCircle />,
-      },
-      {
-        title: "Contact Us",
-        url: "/support/contact",
-        description: "Get in touch with our support team.",
-        icon: <Phone />,
-      },
-      {
-        title: "FAQs",
-        url: "/support/faq",
-        description: "Frequently Asked Questions.",
-        icon: <Info />,
-      },
-    ],
   },
 ];
 
@@ -121,7 +61,16 @@ export default function RootLayout({
     <html lang="en">
       <body>
           <NavBar2 
-            authLinks={{ visible:false }}
+            authLinks={{ 
+              visible: true,
+              login: {
+                text: "Sign in",
+                isVisible: true,
+                variant: "outline",
+                className: "border-2 font-semibold",
+                urlLink: "/login"
+              }
+            }}
             domain={{
               logo: (
                 <div className = "flex size-8 bg-primary justify-center items-center">

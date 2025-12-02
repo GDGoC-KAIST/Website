@@ -2,40 +2,29 @@ import {onRequest} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
 import {setCorsHeaders} from "../utils/cors";
 import {SeminarService} from "../services/seminarService";
-import {AdminService} from "../services/adminService";
 import {SeminarType} from "../types/seminar";
 
 const seminarService = new SeminarService();
-const adminService = new AdminService();
 
-const handleOptions = (response: any): boolean => {
+const handleOptions = (request: any, response: any): boolean => {
   setCorsHeaders(response);
-  if (response.method === "OPTIONS") {
+  if (request.method === "OPTIONS") {
     response.status(204).send("");
     return true;
   }
   return false;
 };
 
-const checkAdmin = async (userId: string | undefined): Promise<void> => {
-  if (!userId) {
-    throw new Error("adminId is required");
-  }
-
-  const isAdmin = await adminService.isAdmin(userId);
-  if (!isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
-  }
-};
+// checkAdmin 함수는 더 이상 사용하지 않음 (작성자 권한 체크로 대체)
 
 const isBadRequestMessage = (message: string): boolean => {
   return message.startsWith("Invalid") || message.startsWith("Missing");
 };
 
-// 세미나 생성 (Admin Only)
+// 세미나 생성 (로그인된 사용자)
 export const createSeminar = onRequest(async (request, response) => {
   setCorsHeaders(response);
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "POST") {
     response.status(405).json({error: "Method not allowed"});
@@ -44,7 +33,7 @@ export const createSeminar = onRequest(async (request, response) => {
 
   try {
     const {
-      adminId,
+      userId,
       title,
       summary,
       type,
@@ -58,7 +47,11 @@ export const createSeminar = onRequest(async (request, response) => {
       coverImageId,
     } = request.body;
 
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
 
     if (!title || !summary || !type || !semester || !contentMd) {
       response.status(400).json({
@@ -79,8 +72,8 @@ export const createSeminar = onRequest(async (request, response) => {
       contentMd,
       attachmentUrls,
       coverImageId,
-      createdBy: adminId,
-      updatedBy: adminId,
+      createdBy: userId,
+      updatedBy: userId,
     });
 
     response.status(201).json(seminar);
@@ -104,7 +97,7 @@ export const createSeminar = onRequest(async (request, response) => {
 // 세미나 목록 조회 (Public)
 export const getSeminars = onRequest(async (request, response) => {
   setCorsHeaders(response);
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -136,7 +129,7 @@ export const getSeminars = onRequest(async (request, response) => {
 // 단일 세미나 조회 (Public)
 export const getSeminar = onRequest(async (request, response) => {
   setCorsHeaders(response);
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -144,12 +137,26 @@ export const getSeminar = onRequest(async (request, response) => {
   }
 
   try {
-    const seminarId = request.path.split("/").pop();
+    // Firebase Functions 경로에서 ID 추출
+    let seminarId = request.path.split("/").pop();
+    
+    // 경로가 비어있거나 함수 이름만 있는 경우, URL에서 추출 시도
+    if (!seminarId || seminarId === "getSeminar") {
+      const urlParts = request.url.split("/");
+      seminarId = urlParts[urlParts.length - 1]?.split("?")[0];
+    }
 
-    if (!seminarId) {
+    if (!seminarId || seminarId === "getSeminar") {
+      logger.error("Seminar ID extraction failed", {
+        path: request.path,
+        url: request.url,
+        query: request.query,
+      });
       response.status(400).json({error: "Seminar ID is required"});
       return;
     }
+
+    logger.info("Fetching seminar", {seminarId, path: request.path, url: request.url});
 
     const seminar = await seminarService.getSeminar(seminarId);
     response.status(200).json(seminar);
@@ -163,10 +170,10 @@ export const getSeminar = onRequest(async (request, response) => {
   }
 });
 
-// 세미나 업데이트 (Admin Only)
+// 세미나 업데이트 (작성자만 가능)
 export const updateSeminar = onRequest(async (request, response) => {
   setCorsHeaders(response);
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "PUT") {
     response.status(405).json({error: "Method not allowed"});
@@ -182,7 +189,7 @@ export const updateSeminar = onRequest(async (request, response) => {
     }
 
     const {
-      adminId,
+      userId,
       title,
       summary,
       type,
@@ -196,7 +203,18 @@ export const updateSeminar = onRequest(async (request, response) => {
       coverImageId,
     } = request.body;
 
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
+
+    // 세미나 조회 및 작성자 확인
+    const seminar = await seminarService.getSeminar(seminarId);
+    if (seminar.createdBy !== userId) {
+      response.status(403).json({error: "Unauthorized: Only the author can update this seminar"});
+      return;
+    }
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
@@ -216,7 +234,7 @@ export const updateSeminar = onRequest(async (request, response) => {
       return;
     }
 
-    updateData.updatedBy = adminId;
+    updateData.updatedBy = userId;
 
     const updated = await seminarService.updateSeminar(seminarId, updateData);
 
@@ -242,10 +260,10 @@ export const updateSeminar = onRequest(async (request, response) => {
   }
 });
 
-// 세미나 삭제 (Admin Only)
+// 세미나 삭제 (작성자만 가능)
 export const deleteSeminar = onRequest(async (request, response) => {
   setCorsHeaders(response);
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "DELETE") {
     response.status(405).json({error: "Method not allowed"});
@@ -260,9 +278,20 @@ export const deleteSeminar = onRequest(async (request, response) => {
       return;
     }
 
-    const {adminId} = request.body;
+    const {userId} = request.body;
 
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
+
+    // 세미나 조회 및 작성자 확인
+    const seminar = await seminarService.getSeminar(seminarId);
+    if (seminar.createdBy !== userId) {
+      response.status(403).json({error: "Unauthorized: Only the author can delete this seminar"});
+      return;
+    }
 
     await seminarService.deleteSeminar(seminarId);
 

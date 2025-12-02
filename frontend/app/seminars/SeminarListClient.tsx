@@ -1,6 +1,7 @@
 "use client";
 
 import {useMemo, useState} from "react";
+import Link from "next/link";
 import {api} from "@/lib/api";
 import type {Seminar, SeminarType} from "@/lib/types";
 
@@ -135,9 +136,10 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredSeminars.map((seminar) => (
-            <article
+            <Link
               key={seminar.id}
-              className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+              href={`/seminars/${seminar.id}`}
+              className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md cursor-pointer"
             >
               {seminar.coverImageUrl ? (
                 <div className="h-48 w-full overflow-hidden rounded-t-2xl bg-gray-100">
@@ -172,14 +174,8 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
                 <p className="text-sm text-gray-600 line-clamp-3">
                   {seminar.summary}
                 </p>
-                <a
-                  href={`/seminars/${seminar.id}`}
-                  className="text-sm font-semibold text-primary hover:underline"
-                >
-                  View Details →
-                </a>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}

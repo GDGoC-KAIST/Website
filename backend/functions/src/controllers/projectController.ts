@@ -8,9 +8,9 @@ const projectService = new ProjectService();
 const adminService = new AdminService();
 
 // HTTP 요청/응답 처리 레이어
-const handleOptions = (response: any) => {
+const handleOptions = (request: any, response: any) => {
   setCorsHeaders(response);
-  if (response.method === "OPTIONS") {
+  if (request.method === "OPTIONS") {
     response.status(204).send("");
     return true;
   }
@@ -29,11 +29,11 @@ const checkAdmin = async (userId: string | undefined): Promise<void> => {
   }
 };
 
-// 프로젝트 생성 (Admin Only)
+// 프로젝트 생성 (로그인된 사용자)
 export const createProject = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "POST") {
     response.status(405).json({error: "Method not allowed"});
@@ -42,7 +42,7 @@ export const createProject = onRequest(async (request, response) => {
 
   try {
     const {
-      adminId,
+      userId,
       title,
       summary,
       description,
@@ -53,10 +53,14 @@ export const createProject = onRequest(async (request, response) => {
       thumbnailUrl,
       teamMembers,
       techStack,
+      contentMd, // 마크다운 콘텐츠
     } = request.body;
 
-    // Admin 권한 확인
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
 
     if (!title || !summary || !semester || !status || !teamMembers || !techStack) {
       response.status(400).json({
@@ -76,6 +80,8 @@ export const createProject = onRequest(async (request, response) => {
       thumbnailUrl,
       teamMembers,
       techStack,
+      contentMd,
+      createdBy: userId,
     });
 
     response.status(201).json(projectData);
@@ -100,7 +106,7 @@ export const createProject = onRequest(async (request, response) => {
 export const getProjects = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -132,7 +138,7 @@ export const getProjects = onRequest(async (request, response) => {
 export const getProject = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -140,18 +146,34 @@ export const getProject = onRequest(async (request, response) => {
   }
 
   try {
-    const projectId = request.path.split("/").pop();
+    // Firebase Functions 경로에서 ID 추출
+    // 경로 형식: /getProject/{id} 또는 /{region}/getProject/{id}
+    let projectId = request.path.split("/").pop();
+    
+    // 경로가 비어있거나 함수 이름만 있는 경우, URL에서 추출 시도
+    if (!projectId || projectId === "getProject") {
+      const urlParts = request.url.split("/");
+      projectId = urlParts[urlParts.length - 1]?.split("?")[0];
+    }
 
-    if (!projectId) {
+    if (!projectId || projectId === "getProject") {
+      logger.error("Project ID extraction failed", {
+        path: request.path,
+        url: request.url,
+        query: request.query,
+      });
       response.status(400).json({error: "Project ID is required"});
       return;
     }
+
+    logger.info("Fetching project", {projectId, path: request.path, url: request.url});
 
     const projectData = await projectService.getProject(projectId);
 
     response.status(200).json(projectData);
   } catch (error) {
     if (error instanceof Error && error.message === "Project not found") {
+      logger.warn("Project not found", {path: request.path, url: request.url});
       response.status(404).json({error: "Project not found"});
       return;
     }
@@ -160,11 +182,11 @@ export const getProject = onRequest(async (request, response) => {
   }
 });
 
-// 프로젝트 업데이트 (Admin Only)
+// 프로젝트 업데이트 (작성자만 가능)
 export const updateProject = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "PUT") {
     response.status(405).json({error: "Method not allowed"});
@@ -180,7 +202,7 @@ export const updateProject = onRequest(async (request, response) => {
     }
 
     const {
-      adminId,
+      userId,
       title,
       summary,
       description,
@@ -191,10 +213,21 @@ export const updateProject = onRequest(async (request, response) => {
       thumbnailUrl,
       teamMembers,
       techStack,
+      contentMd,
     } = request.body;
 
-    // Admin 권한 확인
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
+
+    // 프로젝트 조회 및 작성자 확인
+    const project = await projectService.getProject(projectId);
+    if (project.createdBy !== userId) {
+      response.status(403).json({error: "Unauthorized: Only the author can update this project"});
+      return;
+    }
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
@@ -207,6 +240,7 @@ export const updateProject = onRequest(async (request, response) => {
     if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
     if (teamMembers !== undefined) updateData.teamMembers = teamMembers;
     if (techStack !== undefined) updateData.techStack = techStack;
+    if (contentMd !== undefined) updateData.contentMd = contentMd;
 
     const updatedProject = await projectService.updateProject(projectId, updateData);
 
@@ -229,11 +263,11 @@ export const updateProject = onRequest(async (request, response) => {
   }
 });
 
-// 프로젝트 삭제 (Admin Only)
+// 프로젝트 삭제 (작성자만 가능)
 export const deleteProject = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "DELETE") {
     response.status(405).json({error: "Method not allowed"});
@@ -248,10 +282,20 @@ export const deleteProject = onRequest(async (request, response) => {
       return;
     }
 
-    const {adminId} = request.body;
+    const {userId} = request.body;
 
-    // Admin 권한 확인
-    await checkAdmin(adminId);
+    // 로그인된 사용자 확인
+    if (!userId) {
+      response.status(401).json({error: "User ID is required. Please login first."});
+      return;
+    }
+
+    // 프로젝트 조회 및 작성자 확인
+    const project = await projectService.getProject(projectId);
+    if (project.createdBy !== userId) {
+      response.status(403).json({error: "Unauthorized: Only the author can delete this project"});
+      return;
+    }
 
     await projectService.deleteProject(projectId);
 
@@ -277,7 +321,7 @@ export const deleteProject = onRequest(async (request, response) => {
 export const refreshProjectReadme = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "POST") {
     response.status(405).json({error: "Method not allowed"});
