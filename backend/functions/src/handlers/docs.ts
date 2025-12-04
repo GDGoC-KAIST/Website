@@ -30,6 +30,14 @@ export const apiDocs = onRequest((request, response) => {
         description: "Functions 서버",
       },
     ],
+    components: {
+      schemas: {
+        TipTapDoc: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+    },
     paths: {
       "/us-central1/createImage": {
         post: {

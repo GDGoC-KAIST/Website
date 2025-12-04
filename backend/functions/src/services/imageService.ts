@@ -1,122 +1,177 @@
+import type {Request} from "express";
 import {Timestamp} from "firebase-admin/firestore";
-import {ImageData} from "../types/image";
-import {ImageRepository} from "../repositories/imageRepository";
-import {StorageRepository} from "../repositories/storageRepository";
-import * as logger from "firebase-functions/logger";
-import {stripUndefined} from "../utils/clean";
-import {toFirestorePatch} from "../utils/patch";
+import {ImageRepo, ImageFilter} from "../repositories/imageRepo";
+import {deleteFile, getSignedUrl, uploadFile} from "../utils/storage";
+import type {Image, ImageScope, NewImage} from "../types/schema";
+import {AppError} from "../utils/appError";
+import type {Role} from "../types/auth";
+import {bucket} from "../config/firebase";
 
-// 비즈니스 로직 레이어
+export interface UserContext {
+  sub: string;
+  roles: Role[];
+}
+
+export interface ListImageQuery {
+  limit?: number;
+  cursor?: string;
+  uploaderUserId?: string;
+}
+
+export interface UpdateImageDto {
+  name?: string;
+  description?: string | null;
+  scope?: ImageScope;
+}
+
 export class ImageService {
-  private imageRepo: ImageRepository;
-  private storageRepo: StorageRepository;
+  private repo = new ImageRepo();
 
-  constructor() {
-    this.imageRepo = new ImageRepository();
-    this.storageRepo = new StorageRepository();
-  }
+  async uploadImage(user: UserContext, req: Request): Promise<Image> {
+    this.ensureMember(user.roles);
+    const {file, fields} = await uploadFile(req, user.sub);
 
-  // 이미지 생성 및 업로드
-  async createImage(
-    name: string,
-    description: string,
-    file: {data: Buffer; filename: string; mimetype: string}
-  ): Promise<ImageData> {
-    // Storage에 파일 업로드
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.filename}`;
-    const storagePath = `images/${fileName}`;
+    const name = (fields.name || file.originalName || "image").trim();
+    const description = fields.description ? fields.description.trim() : undefined;
+    const scope = this.parseScope(fields.scope);
+    const now = Timestamp.now();
 
-    const url = await this.storageRepo.uploadFile(
-      storagePath,
-      file.data,
-      file.mimetype
-    );
-
-    // Firestore에 메타데이터 저장
-    const imageData: Omit<ImageData, "id"> = stripUndefined({
+    const imageData: NewImage = {
       name,
       description,
-      url,
-      storagePath,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
-
-    const id = await this.imageRepo.create(imageData);
-
-    logger.info("Image created and uploaded", {id, storagePath});
-
-    return {
-      id,
-      ...imageData,
+      storagePath: file.storagePath,
+      url: this.buildCanonicalUrl(file.storagePath),
+      scope,
+      uploaderUserId: user.sub,
+      createdAt: now,
+      updatedAt: now,
     };
+
+    const created = await this.repo.createImage(imageData);
+    return this.withSignedUrl(created);
   }
 
-  // 이미지 목록 조회
-  async getImages(limit: number = 50, offset: number = 0): Promise<{
-    images: ImageData[];
-    total: number;
-  }> {
-    const images = await this.imageRepo.findAll(limit, offset);
-    return {
-      images,
-      total: images.length,
+  async listImages(user: UserContext | undefined, query: ListImageQuery) {
+    const limit = query.limit && query.limit > 0 ? Math.min(query.limit, 50) : 20;
+    const filter: ImageFilter = {
+      uploaderUserId: query.uploaderUserId,
+      scopes: this.allowedScopes(user, query.uploaderUserId),
     };
+
+    const result = await this.repo.listImages(filter, limit, query.cursor);
+    const images = await Promise.all(result.images.map((image) => this.withSignedUrl(image)));
+    return {images, nextCursor: result.nextCursor};
   }
 
-  // 단일 이미지 조회
-  async getImage(imageId: string): Promise<ImageData> {
-    const image = await this.imageRepo.findById(imageId);
-
+  async getImage(user: UserContext | undefined, imageId: string): Promise<Image> {
+    const image = await this.repo.findById(imageId);
     if (!image) {
-      throw new Error("Image not found");
+      throw new AppError(404, "IMAGE_NOT_FOUND", "Image not found");
     }
-
-    return image;
+    this.guardVisibility(image, user);
+    return this.withSignedUrl(image);
   }
 
-  // 이미지 업데이트
-  async updateImage(
-    imageId: string,
-    updateData: Partial<Pick<ImageData, "name" | "description" | "url" | "storagePath">>
-  ): Promise<ImageData> {
-    const updatePayload: Partial<ImageData> = {
-      updatedAt: Timestamp.now(),
-      ...updateData,
-    };
-
-    const sanitizedPayload = stripUndefined(updatePayload);
-    const patchPayload = toFirestorePatch(sanitizedPayload as Record<string, unknown>);
-
-    return await this.imageRepo.update(
-      imageId,
-      patchPayload as Partial<ImageData>
-    );
-  }
-
-  // 이미지 삭제
-  async deleteImage(imageId: string): Promise<void> {
-    // Firestore에서 이미지 데이터 가져오기
-    const image = await this.imageRepo.findById(imageId);
-
+  async updateImage(user: UserContext, imageId: string, body: UpdateImageDto): Promise<Image> {
+    const image = await this.repo.findById(imageId);
     if (!image) {
-      throw new Error("Image not found");
+      throw new AppError(404, "IMAGE_NOT_FOUND", "Image not found");
     }
+    this.guardOwner(image, user);
 
-    // Storage에서 파일 삭제
-    if (image.storagePath) {
-      try {
-        await this.storageRepo.deleteFile(image.storagePath);
-      } catch (error) {
-        logger.warn("Failed to delete storage file, continuing with Firestore delete", error);
-        // Storage 삭제 실패해도 Firestore는 삭제 진행
+    const updateData: Partial<Image> = {};
+
+    if (body.name !== undefined) {
+      const trimmed = body.name.trim();
+      if (!trimmed) {
+        throw new AppError(400, "INVALID_ARGUMENT", "Name cannot be empty");
       }
+      updateData.name = trimmed;
     }
 
-    // Firestore에서 메타데이터 삭제
-    await this.imageRepo.delete(imageId);
+    if (body.description !== undefined) {
+      updateData.description = body.description ? body.description.trim() : "";
+    }
 
-    logger.info("Image deleted", {id: imageId});
+    if (body.scope) {
+      updateData.scope = this.parseScope(body.scope);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new AppError(400, "INVALID_ARGUMENT", "No fields to update");
+    }
+
+    await this.repo.updateImage(imageId, updateData);
+    const updated = await this.repo.findById(imageId);
+    if (!updated) {
+      throw new AppError(404, "IMAGE_NOT_FOUND", "Image not found");
+    }
+    return this.withSignedUrl(updated);
+  }
+
+  async deleteImage(user: UserContext, imageId: string): Promise<void> {
+    const image = await this.repo.findById(imageId);
+    if (!image) {
+      throw new AppError(404, "IMAGE_NOT_FOUND", "Image not found");
+    }
+    this.guardOwner(image, user);
+    await deleteFile(image.storagePath);
+    await this.repo.deleteImageDoc(imageId);
+  }
+
+  private ensureMember(roles: Role[]) {
+    if (!roles.some((role) => role === "MEMBER" || role === "ADMIN")) {
+      throw new AppError(403, "FORBIDDEN", "Only members can upload images");
+    }
+  }
+
+  private allowedScopes(user: UserContext | undefined, uploaderFilter?: string): ImageScope[] {
+    const scopes: ImageScope[] = ["public"];
+    if (user && user.roles.some((role) => role === "MEMBER" || role === "ADMIN")) {
+      scopes.push("members");
+    }
+    if (user && (user.roles.includes("ADMIN") || (uploaderFilter && uploaderFilter === user.sub))) {
+      scopes.push("private");
+    }
+    return scopes;
+  }
+
+  private guardVisibility(image: Image, user?: UserContext) {
+    if (image.scope === "public") return;
+    if (!user) {
+      throw new AppError(403, "FORBIDDEN", "Authentication required");
+    }
+    if (image.scope === "members") {
+      if (!user.roles.some((role) => role === "MEMBER" || role === "ADMIN")) {
+        throw new AppError(403, "FORBIDDEN", "Members only");
+      }
+      return;
+    }
+    if (image.scope === "private") {
+      this.guardOwner(image, user);
+    }
+  }
+
+  private guardOwner(image: Image, user: UserContext) {
+    if (image.uploaderUserId !== user.sub && !user.roles.includes("ADMIN")) {
+      throw new AppError(403, "FORBIDDEN", "Not allowed");
+    }
+  }
+
+  private parseScope(raw?: string): ImageScope {
+    const normalized = (raw || "members").toLowerCase();
+    if (normalized === "public" || normalized === "members" || normalized === "private") {
+      return normalized;
+    }
+    return "members";
+  }
+
+  private async withSignedUrl(image: Image): Promise<Image> {
+    const signedUrl = await getSignedUrl(image.storagePath);
+    return {...image, url: signedUrl};
+  }
+
+  private buildCanonicalUrl(storagePath: string): string {
+    return `gs://${bucket.name}/${storagePath}`;
   }
 }

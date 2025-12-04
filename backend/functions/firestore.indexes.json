@@ -1,0 +1,47 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "visibility", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "visibility", "order": "ASCENDING"},
+        {"fieldPath": "type", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "targetType", "order": "ASCENDING"},
+        {"fieldPath": "targetId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "likes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "semester", "order": "DESCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

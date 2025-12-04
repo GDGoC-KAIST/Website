@@ -1,6 +1,9 @@
 import {MemberRepository} from "../repositories/memberRepository";
 import * as logger from "firebase-functions/logger";
 
+export const SENDER_EMAIL = process.env.SENDER_EMAIL ?? "noreply@gdgockaist.com";
+export const SES_REGION = process.env.SES_REGION ?? "ap-northeast-2";
+
 // 관리자 이메일 목록 가져오기
 // 우선순위: 1. 환경 변수 ADMIN_EMAIL 2. 멤버 컬렉션의 isAdmin=true 멤버들
 export async function getAdminEmails(): Promise<string[]> {
@@ -48,7 +51,9 @@ export async function getAdminEmails(): Promise<string[]> {
       })),
     });
 
-    const emails = admins.map((admin) => admin.email).filter((email) => email);
+    const emails = admins
+      .map((admin) => admin.email?.trim())
+      .filter((email): email is string => Boolean(email));
 
     if (emails.length > 0) {
       logger.info("✅ Using admin emails from members collection", {
@@ -86,4 +91,3 @@ export const getBaseUrl = (): string => {
   }
   return `https://us-central1-${projectId}.cloudfunctions.net`;
 };
-

@@ -1,10 +1,14 @@
 import {Timestamp} from "firebase-admin/firestore";
 import {UserData, UserStatus} from "../types/user";
-import {UserRepository} from "../repositories/userRepository";
+import {UserRepository, UserRepo, type GitHubProfile, type User as UserDocument} from "../repositories/userRepository";
 import * as logger from "firebase-functions/logger";
 import {sendEmail, createRegistrationRequestEmail} from "../utils/email";
 import {generateApprovalToken} from "../utils/token";
 import {getAdminEmails, getBaseUrl} from "../config/email";
+import {AppError} from "../utils/appError";
+import {SessionRepo} from "../repositories/sessionRepo";
+import {createSessionPayload, generateAccessToken, generateRefreshToken} from "./tokenService";
+import {generateRandomToken, hashToken} from "../utils/hash";
 
 // GitHub OAuth 토큰으로 사용자 정보 가져오기
 async function fetchGitHubUser(accessToken: string): Promise<{
@@ -192,3 +196,203 @@ export class AuthService {
   }
 }
 
+const GITHUB_PROFILE_ENDPOINT = "https://api.github.com/user";
+const GITHUB_EMAIL_ENDPOINT = "https://api.github.com/user/emails";
+
+interface LoginContext {
+  ip?: string;
+  userAgent?: string;
+}
+
+const REFRESH_TOKEN_DELIMITER = ".";
+
+class RefreshReuseDetectedError extends Error {
+  constructor(public readonly userId: string) {
+    super("REFRESH_REUSE_DETECTED");
+    this.name = "RefreshReuseDetectedError";
+  }
+}
+
+function composeRefreshToken(sessionId: string, secret: string): string {
+  return `${sessionId}${REFRESH_TOKEN_DELIMITER}${secret}`;
+}
+
+function extractSessionId(refreshToken: string): string {
+  const [sessionId, secret] = refreshToken.split(REFRESH_TOKEN_DELIMITER);
+  if (!sessionId || !secret) {
+    throw new AppError(400, "INVALID_REFRESH_TOKEN", "Refresh token is malformed");
+  }
+  return sessionId;
+}
+
+export class AuthV2Service {
+  private userRepo = new UserRepo();
+  private sessionRepo = new SessionRepo();
+
+  async loginWithGitHub(githubAccessToken: string, context: LoginContext = {}): Promise<{
+    user: UserDocument;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    if (!githubAccessToken) {
+      throw new AppError(400, "INVALID_REQUEST", "githubAccessToken is required");
+    }
+
+    const githubProfile = await fetchGitHubProfile(githubAccessToken);
+    const user = await this.userRepo.upsertUser(githubProfile);
+
+    const sessionId = generateRandomToken(32);
+    const refreshToken = composeRefreshToken(sessionId, generateRefreshToken());
+    const session = createSessionPayload({
+      userId: user.id,
+      refreshToken,
+      ip: context.ip,
+      userAgent: context.userAgent,
+    });
+
+    await this.sessionRepo.createSession(sessionId, session);
+
+    const accessToken = generateAccessToken({
+      sub: user.id,
+      roles: user.roles,
+      memberId: user.memberId,
+      sid: sessionId,
+    });
+
+    return {
+      user,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async refreshSession(refreshToken: string, context: LoginContext = {}): Promise<{accessToken: string; refreshToken: string}> {
+    if (!refreshToken) {
+      throw new AppError(400, "INVALID_ARGUMENT", "refreshToken is required");
+    }
+
+    const sessionId = extractSessionId(refreshToken);
+    const incomingHash = hashToken(refreshToken);
+
+    let rotationResult: {userId: string; sessionId: string; refreshToken: string};
+    try {
+      rotationResult = await this.sessionRepo.runTransaction(async (tx) => {
+        const session = await this.sessionRepo.findById(sessionId, tx);
+        if (!session) {
+          throw new AppError(401, "REFRESH_TOKEN_INVALID", "Refresh token is invalid");
+        }
+        if (session.refreshTokenHash !== incomingHash) {
+          throw new AppError(401, "REFRESH_TOKEN_INVALID", "Refresh token is invalid");
+        }
+        if (session.revokedAt || session.rotatedAt) {
+          throw new RefreshReuseDetectedError(session.userId);
+        }
+        if (session.expiresAt.toMillis() <= Date.now()) {
+          throw new AppError(401, "REFRESH_TOKEN_EXPIRED", "Refresh token has expired");
+        }
+
+        const nextSessionId = generateRandomToken(32);
+        const nextRefreshToken = composeRefreshToken(nextSessionId, generateRefreshToken());
+        const newSessionPayload = createSessionPayload({
+          userId: session.userId,
+          refreshToken: nextRefreshToken,
+          ip: context.ip,
+          userAgent: context.userAgent,
+        });
+
+        const rotationTime = Timestamp.now();
+        this.sessionRepo.createSessionTx(tx, nextSessionId, newSessionPayload);
+        tx.update(this.sessionRepo.doc(session.id), {
+          rotatedAt: rotationTime,
+          replacedBy: nextSessionId,
+        });
+
+        return {
+          userId: session.userId,
+          sessionId: nextSessionId,
+          refreshToken: nextRefreshToken,
+        };
+      });
+    } catch (error) {
+      if (error instanceof RefreshReuseDetectedError) {
+        await this.sessionRepo.revokeAllSessions(error.userId);
+        throw new AppError(401, "REFRESH_REUSE_DETECTED", "Refresh token reuse detected");
+      }
+      throw error;
+    }
+
+    const user = await this.userRepo.findById(rotationResult.userId);
+    const roles = user?.roles ?? ["USER"];
+    const memberId = user?.memberId;
+
+    const finalAccessToken = generateAccessToken({
+      sub: rotationResult.userId,
+      roles,
+      memberId,
+      sid: rotationResult.sessionId,
+    });
+
+    return {
+      accessToken: finalAccessToken,
+      refreshToken: rotationResult.refreshToken,
+    };
+  }
+}
+
+async function fetchGitHubProfile(accessToken: string): Promise<GitHubProfile> {
+  const response = await fetch(GITHUB_PROFILE_ENDPOINT, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/vnd.github+json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new AppError(response.status, "GITHUB_USER_FETCH_FAILED", "Failed to fetch GitHub profile");
+  }
+
+  const data = await response.json() as GitHubProfile & {email?: string | null; avatar_url?: string | null;};
+  let email = data.email ?? undefined;
+
+  if (!email) {
+    const verifiedEmail = await fetchVerifiedGithubEmail(accessToken);
+    if (!verifiedEmail) {
+      throw new AppError(403, "GITHUB_NO_VERIFIED_EMAIL", "GitHub account has no verified email");
+    }
+    email = verifiedEmail;
+  }
+
+  return {
+    id: data.id,
+    login: data.login,
+    name: data.name ?? data.login,
+    email,
+    avatar_url: data.avatar_url,
+  };
+}
+
+async function fetchVerifiedGithubEmail(accessToken: string): Promise<string | null> {
+  const response = await fetch(GITHUB_EMAIL_ENDPOINT, {
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/vnd.github+json",
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const emails = await response.json() as Array<{
+    email: string;
+    primary: boolean;
+    verified: boolean;
+  }>;
+
+  const primary = emails.find((entry) => entry.primary && entry.verified);
+  if (primary) {
+    return primary.email;
+  }
+
+  return null;
+}

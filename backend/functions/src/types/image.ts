@@ -11,4 +11,3 @@ export interface ImageData {
 }
 
 export const IMAGES_COLLECTION = "images";
-

@@ -4,6 +4,7 @@
  */
 
 import "dotenv/config";
+import "./config/env";
 import {setGlobalOptions} from "firebase-functions/v2/options";
 import {onRequest as onRequestV2} from "firebase-functions/v2/https";
 import {
@@ -25,6 +26,8 @@ import {
 // Firebase 초기화 (가장 먼저 실행되어야 함)
 import "./config/firebase";
 import "./utils/adminBootstrap";
+import {requestLogger} from "./middleware/requestLogger";
+import {healthRouter} from "./routes/healthRoutes";
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -155,3 +158,28 @@ export const adminUpdateRecruitConfig = onRequestV2(
   recruitRequestOptions,
   adminUpdateRecruitConfigHandler
 );
+
+// ==================== V2 API (Express-based) ====================
+import express from "express";
+import {v2Router} from "./routes/v2";
+import {errorHandler} from "./middleware/errorHandler";
+import {corsMiddleware} from "./middleware/cors";
+
+const app = express();
+
+// Middleware
+app.use(requestLogger);
+app.use(corsMiddleware);
+app.use(express.json());
+
+// Health
+app.use("/healthz", healthRouter);
+
+// V2 Routes
+app.use("/v2", v2Router);
+
+// Error handler (must be last)
+app.use(errorHandler);
+
+// Export as Firebase Function
+export const apiV2 = onRequestV2(app);

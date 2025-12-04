@@ -1,15 +1,15 @@
 import {onRequest} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
-import {ImageService} from "../services/imageService";
+import {LegacyImageService} from "../services/legacyImageService";
 import {setCorsHeaders} from "../utils/cors";
 import {parseMultipartForm} from "../utils/multipart";
 
-const imageService = new ImageService();
+const imageService = new LegacyImageService();
 
 // HTTP 요청/응답 처리 레이어
-const handleOptions = (response: any) => {
+const handleOptions = (request: any, response: any) => {
   setCorsHeaders(response);
-  if (response.method === "OPTIONS") {
+  if (request.method === "OPTIONS") {
     response.status(204).send("");
     return true;
   }
@@ -20,7 +20,7 @@ const handleOptions = (response: any) => {
 export const createImage = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "POST") {
     response.status(405).json({error: "Method not allowed"});
@@ -69,7 +69,7 @@ export const createImage = onRequest(async (request, response) => {
 export const getImages = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -93,7 +93,7 @@ export const getImages = onRequest(async (request, response) => {
 export const getImage = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "GET") {
     response.status(405).json({error: "Method not allowed"});
@@ -125,7 +125,7 @@ export const getImage = onRequest(async (request, response) => {
 export const updateImage = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "PUT") {
     response.status(405).json({error: "Method not allowed"});
@@ -167,7 +167,7 @@ export const updateImage = onRequest(async (request, response) => {
 export const deleteImage = onRequest(async (request, response) => {
   setCorsHeaders(response);
 
-  if (handleOptions(response)) return;
+  if (handleOptions(request, response)) return;
 
   if (request.method !== "DELETE") {
     response.status(405).json({error: "Method not allowed"});
@@ -197,4 +197,3 @@ export const deleteImage = onRequest(async (request, response) => {
     response.status(500).json({error: "Failed to delete image"});
   }
 });
-

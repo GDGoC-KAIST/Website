@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(tree:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(JWT_SECRET=\"test-secret-key-at-least-32-characters-long\" node:*)",
+      "Bash(export JWT_SECRET=\"test-secret-key-at-least-32-characters-long\")",
+      "Bash(node:*)",
+      "Bash(cd:*)",
+      "Bash(chmod:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

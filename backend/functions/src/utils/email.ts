@@ -1,14 +1,19 @@
 import AWS from "aws-sdk";
+import {env} from "../config/env";
 
 const region = process.env.SES_REGION || "ap-northeast-2";
-const ses = new AWS.SES({
-  apiVersion: "2010-12-01",
-  region,
-  credentials: new AWS.Credentials({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  }),
-});
+const isTestEnv = process.env.NODE_ENV === "test";
+
+const ses = !isTestEnv
+  ? new AWS.SES({
+    apiVersion: "2010-12-01",
+    region,
+    credentials: new AWS.Credentials({
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+    }),
+  })
+  : null;
 
 export interface SendEmailPayload {
   to: string;
@@ -23,6 +28,13 @@ export async function sendEmail({
   html,
   text,
 }: SendEmailPayload): Promise<void> {
+  if (isTestEnv || env.disableEmailSending || !ses) {
+    console.info(`[mock:sendEmail] ${subject} -> ${to}`, {
+      killSwitch: env.disableEmailSending,
+    });
+    return;
+  }
+
   try {
     await ses
       .sendEmail({

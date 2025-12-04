@@ -1,0 +1,65 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 61776
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 61774
+    },
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 61775
+    },
+    "pubsub": {
+      "host": "127.0.0.1",
+      "port": 8085
+    },
+    "database": {
+      "host": "127.0.0.1",
+      "port": 9000,
+      "instance": "website-default-rtdb"
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true,
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 61777
+    }
+  }
+}

@@ -1,0 +1,53 @@
+import {Request, Response, NextFunction} from "express";
+import {MemberAdminService} from "../../services/memberService";
+import {AppError} from "../../utils/appError";
+import type {MemberRole} from "../../types/member";
+
+const adminService = new MemberAdminService();
+
+export async function createMember(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const {name, studentId, department, generation, role, blogName, blogDescription} = req.body ?? {};
+
+    if (!name || !studentId || !department || typeof generation !== "number" || !role) {
+      throw new AppError(400, "INVALID_ARGUMENT", "Missing required member fields");
+    }
+
+    const result = await adminService.createMember({
+      name,
+      studentId,
+      department,
+      generation,
+      role: role as MemberRole,
+      blogName,
+      blogDescription,
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetLinkCode(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const memberId = req.params.memberId;
+    if (!memberId) {
+      throw new AppError(400, "INVALID_ARGUMENT", "memberId is required");
+    }
+
+    const {expiresInDays} = req.body ?? {};
+    const result = await adminService.resetLinkCode(memberId, expiresInDays);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
