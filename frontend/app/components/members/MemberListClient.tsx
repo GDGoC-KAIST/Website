@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import {useState} from "react";
 import {api} from "@/lib/api";
 import type {Member} from "@/lib/types";
+import {Button} from "@/components/ui/button";
 
 interface MemberListClientProps {
   initialMembers: Member[];
@@ -63,11 +65,25 @@ export default function MemberListClient({initialMembers}: MemberListClientProps
           {members.map((member) => (
             <div
               key={member.id}
-              className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md"
+              className="relative flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md"
             >
-              <img
+              {member.isAdmin && (
+                <div className="absolute -right-2 -top-2 z-10">
+                  <Image
+                    src="/GDG 2024 Member Badge.png"
+                    alt="GDG Member Badge"
+                    width={56}
+                    height={56}
+                    className="drop-shadow-lg"
+                  />
+                </div>
+              )}
+              <Image
                 src={getProfileImage(member)}
                 alt={member.name}
+                width={96}
+                height={96}
+                unoptimized
                 className="h-24 w-24 rounded-full object-cover"
               />
               <h3 className="mt-4 text-lg font-semibold">{member.name}</h3>
@@ -95,14 +111,16 @@ export default function MemberListClient({initialMembers}: MemberListClientProps
 
       {showLoadMore && (
         <div className="flex justify-center">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="lg"
+            className="px-8"
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="rounded-full bg-black px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {loadingMore ? "Loading..." : "Load More"}
-          </button>
+          </Button>
         </div>
       )}
     </div>

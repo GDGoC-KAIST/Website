@@ -14,6 +14,11 @@ export class AdminService {
 
   // 관리자 권한 확인
   async isAdmin(userId: string): Promise<boolean> {
+    const envAdminId = process.env.ADMIN_ID?.trim();
+    if (envAdminId && userId?.trim() === envAdminId) {
+      return true;
+    }
+
     const user = await this.userRepo.findById(userId);
     return user?.isAdmin === true || false;
   }
@@ -190,4 +195,3 @@ export class AdminService {
     });
   }
 }
-

@@ -49,10 +49,10 @@ if (isEmulator) {
 }
 
 admin.initializeApp();
+admin.firestore().settings({ignoreUndefinedProperties: true});
 
 // Firestore와 Storage 참조
 export const db = admin.firestore();
 export const storage = admin.storage();
 // Firebase Admin SDK가 자동으로 프로젝트의 기본 Storage 버킷을 찾습니다
 export const bucket = storage.bucket();
-

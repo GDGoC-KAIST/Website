@@ -16,30 +16,34 @@
   <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
   <script>
     window.onload = function() {
-            const spec = {
+      // JSON을 인라인으로 포함 (CORS 문제 해결)
+      const spec = 
+{
   "openapi": "3.0.0",
   "info": {
-    "title": "GDGoC KAIST Backend API",
+    "title": "GDGoC API",
     "version": "1.0.0",
-    "description": "Firebase Functions를 통한 이미지, 멤버, 프로젝트, 세미나 CRUD API"
+    "description": "Firebase Functions를 통한 이미지 및 멤버 CRUD API"
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5001/website-7ee8f/us-central1",
-      "description": "Functions 에뮬레이터"
+      "url": "http://localhost:5001/website-7ee8f",
+      "description": "Functions 서버"
     }
   ],
   "paths": {
     "/createImage": {
       "post": {
-        "tags": ["이미지"],
         "summary": "이미지 생성 및 업로드",
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["name", "file"],
+                "required": [
+                  "name",
+                  "file"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -61,14 +65,20 @@
         },
         "responses": {
           "201": {
-            "description": "이미지 생성 성공"
+            "description": "이미지 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/getImages": {
       "get": {
-        "tags": ["이미지"],
         "summary": "이미지 목록 조회",
         "parameters": [
           {
@@ -90,14 +100,20 @@
         ],
         "responses": {
           "200": {
-            "description": "성공"
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/getImage/{imageId}": {
       "get": {
-        "tags": ["이미지"],
         "summary": "단일 이미지 조회",
         "parameters": [
           {
@@ -118,7 +134,6 @@
     },
     "/updateImage/{imageId}": {
       "put": {
-        "tags": ["이미지"],
         "summary": "이미지 업데이트",
         "parameters": [
           {
@@ -156,7 +171,6 @@
     },
     "/deleteImage/{imageId}": {
       "delete": {
-        "tags": ["이미지"],
         "summary": "이미지 삭제",
         "parameters": [
           {
@@ -177,14 +191,18 @@
     },
     "/createMember": {
       "post": {
-        "tags": ["멤버"],
         "summary": "멤버 생성",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "email", "department", "githubUsername"],
+                "required": [
+                  "name",
+                  "email",
+                  "department",
+                  "githubUsername"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -209,14 +227,20 @@
         },
         "responses": {
           "201": {
-            "description": "멤버 생성 성공"
+            "description": "멤버 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/getMembers": {
       "get": {
-        "tags": ["멤버"],
         "summary": "멤버 목록 조회",
         "parameters": [
           {
@@ -238,14 +262,20 @@
         ],
         "responses": {
           "200": {
-            "description": "성공"
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/getMember/{memberId}": {
       "get": {
-        "tags": ["멤버"],
         "summary": "단일 멤버 조회",
         "parameters": [
           {
@@ -266,7 +296,6 @@
     },
     "/updateMember/{memberId}": {
       "put": {
-        "tags": ["멤버"],
         "summary": "멤버 업데이트",
         "parameters": [
           {
@@ -310,7 +339,6 @@
     },
     "/deleteMember/{memberId}": {
       "delete": {
-        "tags": ["멤버"],
         "summary": "멤버 삭제",
         "parameters": [
           {
@@ -331,7 +359,6 @@
     },
     "/getSeminars": {
       "get": {
-        "tags": ["세미나"],
         "summary": "세미나 목록 조회",
         "parameters": [
           {
@@ -346,7 +373,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["invited", "internal"]
+              "enum": [
+                "invited",
+                "internal"
+              ]
             }
           },
           {
@@ -376,7 +406,6 @@
     },
     "/getSeminar/{seminarId}": {
       "get": {
-        "tags": ["세미나"],
         "summary": "단일 세미나 조회",
         "parameters": [
           {
@@ -391,24 +420,26 @@
         "responses": {
           "200": {
             "description": "성공"
-          },
-          "404": {
-            "description": "세미나를 찾을 수 없음"
           }
         }
       }
     },
     "/createSeminar": {
       "post": {
-        "tags": ["세미나"],
         "summary": "세미나 생성 (관리자 전용)",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["adminId", "title", "summary", "semester", "type", "contentMd"],
+                "required": [
+                  "adminId",
+                  "title",
+                  "summary",
+                  "semester",
+                  "type",
+                  "contentMd"
+                ],
                 "properties": {
                   "adminId": {
                     "type": "string",
@@ -422,15 +453,16 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": ["invited", "internal"]
+                    "enum": [
+                      "invited",
+                      "internal"
+                    ]
                   },
                   "semester": {
-                    "type": "string",
-                    "description": "YYYY-1 또는 YYYY-2"
+                    "type": "string"
                   },
                   "date": {
-                    "type": "string",
-                    "description": "YYYY-MM-DD"
+                    "type": "string"
                   },
                   "speaker": {
                     "type": "string"
@@ -442,8 +474,7 @@
                     "type": "string"
                   },
                   "contentMd": {
-                    "type": "string",
-                    "description": "Markdown 내용"
+                    "type": "string"
                   },
                   "attachmentUrls": {
                     "type": "array",
@@ -462,16 +493,12 @@
         "responses": {
           "201": {
             "description": "세미나 생성 성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
           }
         }
       }
     },
     "/updateSeminar/{seminarId}": {
       "put": {
-        "tags": ["세미나"],
         "summary": "세미나 업데이트 (관리자 전용)",
         "parameters": [
           {
@@ -484,12 +511,13 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["adminId"],
+                "required": [
+                  "adminId"
+                ],
                 "properties": {
                   "adminId": {
                     "type": "string"
@@ -502,7 +530,10 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": ["invited", "internal"]
+                    "enum": [
+                      "invited",
+                      "internal"
+                    ]
                   },
                   "semester": {
                     "type": "string"
@@ -539,19 +570,12 @@
         "responses": {
           "200": {
             "description": "세미나 업데이트 성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
-          },
-          "404": {
-            "description": "세미나를 찾을 수 없음"
           }
         }
       }
     },
     "/deleteSeminar/{seminarId}": {
       "delete": {
-        "tags": ["세미나"],
         "summary": "세미나 삭제 (관리자 전용)",
         "parameters": [
           {
@@ -564,12 +588,13 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["adminId"],
+                "required": [
+                  "adminId"
+                ],
                 "properties": {
                   "adminId": {
                     "type": "string"
@@ -582,79 +607,66 @@
         "responses": {
           "200": {
             "description": "세미나 삭제 성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
-          },
-          "404": {
-            "description": "세미나를 찾을 수 없음"
           }
         }
       }
     },
-    "/createProject": {
+    "/recruitApply": {
       "post": {
-        "tags": ["프로젝트"],
-        "summary": "프로젝트 생성 (관리자 전용)",
+        "summary": "Recruit - Submit application",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["adminId", "title", "summary", "semester", "status", "teamMembers", "techStack"],
+                "required": [
+                  "name",
+                  "kaistEmail",
+                  "googleEmail",
+                  "phone",
+                  "department",
+                  "studentId",
+                  "motivation",
+                  "experience",
+                  "wantsToDo",
+                  "password"
+                ],
                 "properties": {
-                  "adminId": {
-                    "type": "string",
-                    "description": "관리자 ID (권한 검증용)"
+                  "name": {
+                    "type": "string"
                   },
-                  "title": {
-                    "type": "string",
-                    "description": "프로젝트 제목"
+                  "kaistEmail": {
+                    "type": "string"
                   },
-                  "summary": {
-                    "type": "string",
-                    "description": "프로젝트 한줄 요약"
+                  "googleEmail": {
+                    "type": "string"
                   },
-                  "description": {
-                    "type": "string",
-                    "description": "프로젝트 상세 설명 (선택)"
+                  "phone": {
+                    "type": "string"
                   },
-                  "semester": {
-                    "type": "string",
-                    "description": "학기 (형식: YYYY-1 또는 YYYY-2)",
-                    "example": "2024-2"
+                  "department": {
+                    "type": "string"
                   },
-                  "status": {
-                    "type": "string",
-                    "enum": ["ongoing", "completed"],
-                    "description": "프로젝트 상태"
+                  "studentId": {
+                    "type": "string"
                   },
-                  "githubUrl": {
-                    "type": "string",
-                    "description": "GitHub 레포지토리 URL (README 자동 가져오기)"
+                  "motivation": {
+                    "type": "string"
                   },
-                  "demoUrl": {
-                    "type": "string",
-                    "description": "데모 사이트 URL"
+                  "experience": {
+                    "type": "string"
                   },
-                  "thumbnailUrl": {
-                    "type": "string",
-                    "description": "썸네일 이미지 URL"
+                  "wantsToDo": {
+                    "type": "string"
                   },
-                  "teamMembers": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "팀원 배열"
+                  "githubUsername": {
+                    "type": "string"
                   },
-                  "techStack": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "기술 스택 배열"
+                  "portfolioUrl": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
                   }
                 }
               }
@@ -663,27 +675,167 @@
         },
         "responses": {
           "201": {
-            "description": "프로젝트 생성 성공"
+            "description": "지원서 접수 완료"
           },
-          "403": {
-            "description": "관리자 권한 없음"
+          "409": {
+            "description": "이미 제출된 지원서"
           }
         }
       }
     },
-    "/getProjects": {
-      "get": {
-        "tags": ["프로젝트"],
-        "summary": "프로젝트 목록 조회 (공개)",
+    "/recruitLogin": {
+      "post": {
+        "summary": "Recruit - Login",
+        "description": "10회 이상 실패 시 15분 잠금 + 임시 비밀번호 이메일 발송",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kaistEmail",
+                  "password"
+                ],
+                "properties": {
+                  "kaistEmail": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공 (token 반환)"
+          },
+          "401": {
+            "description": "잘못된 자격 증명"
+          },
+          "423": {
+            "description": "계정 잠김"
+          }
+        }
+      }
+    },
+    "/recruitUpdate": {
+      "post": {
+        "summary": "Recruit - Update application",
         "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bearer {token}"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "googleEmail": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "department": {
+                    "type": "string"
+                  },
+                  "studentId": {
+                    "type": "string"
+                  },
+                  "motivation": {
+                    "type": "string"
+                  },
+                  "experience": {
+                    "type": "string"
+                  },
+                  "wantsToDo": {
+                    "type": "string"
+                  },
+                  "githubUsername": {
+                    "type": "string"
+                  },
+                  "portfolioUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "업데이트 성공"
+          },
+          "401": {
+            "description": "세션 불일치"
+          },
+          "403": {
+            "description": "모집 기간 아님"
+          }
+        }
+      }
+    },
+    "/recruitReset": {
+      "post": {
+        "summary": "Recruit - Request password reset",
+        "description": "이메일 존재 여부와 관계없이 항상 성공 응답",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kaistEmail"
+                ],
+                "properties": {
+                  "kaistEmail": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "임시 비밀번호 발급 (존재 시)"
+          }
+        }
+      }
+    },
+    "/adminGetApplications": {
+      "get": {
+        "summary": "Admin Recruit - List applications",
+        "parameters": [
+          {
+            "name": "adminId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "limit",
             "in": "query",
             "schema": {
               "type": "integer",
               "default": 20
-            },
-            "description": "반환할 최대 개수"
+            }
           },
           {
             "name": "offset",
@@ -691,119 +843,73 @@
             "schema": {
               "type": "integer",
               "default": 0
-            },
-            "description": "건너뛸 개수"
-          },
-          {
-            "name": "semester",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "학기별 필터링 (예: 2024-2)"
+            }
           },
           {
             "name": "status",
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["ongoing", "completed"]
-            },
-            "description": "상태별 필터링"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "성공"
-          }
-        }
-      }
-    },
-    "/getProject/{projectId}": {
-      "get": {
-        "tags": ["프로젝트"],
-        "summary": "단일 프로젝트 조회 (공개)",
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
+              "enum": [
+                "submitted",
+                "reviewing",
+                "accepted",
+                "rejected",
+                "hold"
+              ]
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "성공"
-          },
-          "404": {
-            "description": "프로젝트를 찾을 수 없음"
+            "description": "지원서 목록 반환"
           }
         }
       }
     },
-    "/updateProject/{projectId}": {
-      "put": {
-        "tags": ["프로젝트"],
-        "summary": "프로젝트 업데이트 (관리자 전용)",
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+    "/adminUpdateApplicationStatus": {
+      "patch": {
+        "summary": "Admin Recruit - Update application status",
+        "description": "notify=true이고 status가 accepted/rejected일 때 이메일 전송 (템플릿에서 {{name}} 사용 가능)",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["adminId"],
+                "required": [
+                  "adminId",
+                  "status",
+                  "id"
+                ],
                 "properties": {
                   "adminId": {
-                    "type": "string",
-                    "description": "관리자 ID (권한 검증용)"
-                  },
-                  "title": {
                     "type": "string"
                   },
-                  "summary": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "semester": {
+                  "id": {
                     "type": "string"
                   },
                   "status": {
                     "type": "string",
-                    "enum": ["ongoing", "completed"]
+                    "enum": [
+                      "submitted",
+                      "reviewing",
+                      "accepted",
+                      "rejected",
+                      "hold"
+                    ]
                   },
-                  "githubUrl": {
-                    "type": "string"
+                  "notify": {
+                    "type": "boolean"
                   },
-                  "demoUrl": {
-                    "type": "string"
-                  },
-                  "thumbnailUrl": {
-                    "type": "string"
-                  },
-                  "teamMembers": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "techStack": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
+                  "email": {
+                    "type": "object",
+                    "properties": {
+                      "subject": {
+                        "type": "string"
+                      },
+                      "html": {
+                        "type": "string"
+                      }
                     }
                   }
                 }
@@ -813,115 +919,42 @@
         },
         "responses": {
           "200": {
-            "description": "성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
-          },
-          "404": {
-            "description": "프로젝트를 찾을 수 없음"
+            "description": "상태 업데이트 성공"
           }
         }
       }
     },
-    "/deleteProject/{projectId}": {
-      "delete": {
-        "tags": ["프로젝트"],
-        "summary": "프로젝트 삭제 (관리자 전용)",
+    "/adminExportApplications": {
+      "get": {
+        "summary": "Admin Recruit - Export CSV",
         "parameters": [
           {
-            "name": "projectId",
-            "in": "path",
+            "name": "adminId",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["adminId"],
-                "properties": {
-                  "adminId": {
-                    "type": "string",
-                    "description": "관리자 ID (권한 검증용)"
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
-          },
-          "404": {
-            "description": "프로젝트를 찾을 수 없음"
-          }
-        }
-      }
-    },
-    "/refreshProjectReadme/{projectId}": {
-      "post": {
-        "tags": ["프로젝트"],
-        "summary": "README 수동 갱신 (관리자 전용)",
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["adminId"],
-                "properties": {
-                  "adminId": {
-                    "type": "string",
-                    "description": "관리자 ID (권한 검증용)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "README 갱신 성공"
-          },
-          "403": {
-            "description": "관리자 권한 없음"
-          },
-          "404": {
-            "description": "프로젝트를 찾을 수 없음"
+            "description": "CSV 파일 반환"
           }
         }
       }
     },
     "/loginWithGitHub": {
       "post": {
-        "tags": ["인증"],
         "summary": "GitHub OAuth 로그인/회원가입",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["accessToken"],
+                "required": [
+                  "accessToken"
+                ],
                 "properties": {
                   "accessToken": {
                     "type": "string",
@@ -934,14 +967,20 @@
         },
         "responses": {
           "200": {
-            "description": "로그인/회원가입 성공"
+            "description": "로그인/회원가입 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/getUser": {
       "get": {
-        "tags": ["인증"],
         "summary": "사용자 정보 조회",
         "parameters": [
           {
@@ -962,7 +1001,6 @@
     },
     "/checkApprovalStatus": {
       "get": {
-        "tags": ["인증"],
         "summary": "승인 상태 확인",
         "parameters": [
           {
@@ -983,7 +1021,6 @@
     },
     "/getPendingUsers": {
       "get": {
-        "tags": ["관리자"],
         "summary": "승인 대기 중인 사용자 목록 (관리자 전용)",
         "parameters": [
           {
@@ -1013,21 +1050,30 @@
         ],
         "responses": {
           "200": {
-            "description": "성공"
+            "description": "성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
     },
     "/approveUser": {
       "post": {
-        "tags": ["관리자"],
         "summary": "사용자 승인 (관리자 전용)",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["userId", "adminId"],
+                "required": [
+                  "userId",
+                  "adminId"
+                ],
                 "properties": {
                   "userId": {
                     "type": "string",
@@ -1051,14 +1097,16 @@
     },
     "/rejectUser": {
       "post": {
-        "tags": ["관리자"],
         "summary": "사용자 거부 (관리자 전용)",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["userId", "adminId"],
+                "required": [
+                  "userId",
+                  "adminId"
+                ],
                 "properties": {
                   "userId": {
                     "type": "string",
@@ -1082,14 +1130,16 @@
     },
     "/grantAdmin": {
       "post": {
-        "tags": ["관리자"],
         "summary": "관리자 권한 부여 (관리자 전용)",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["userId", "adminId"],
+                "required": [
+                  "userId",
+                  "adminId"
+                ],
                 "properties": {
                   "userId": {
                     "type": "string",
@@ -1113,7 +1163,6 @@
     }
   }
 };
-
       const ui = SwaggerUIBundle({
         spec: spec,
         dom_id: '#swagger-ui',

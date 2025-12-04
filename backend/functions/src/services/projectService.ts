@@ -2,6 +2,8 @@ import {Timestamp} from "firebase-admin/firestore";
 import {ProjectDoc} from "../types/project";
 import {ProjectRepository} from "../repositories/projectRepository";
 import * as logger from "firebase-functions/logger";
+import {stripUndefined} from "../utils/clean";
+import {toFirestorePatch} from "../utils/patch";
 
 // GitHub README 가져오기 (Fail-Safe)
 async function fetchGitHubReadme(githubUrl: string): Promise<string | undefined> {
@@ -78,13 +80,13 @@ export class ProjectService {
       }
     }
 
-    const newProject: Omit<ProjectDoc, "id"> = {
+    const newProject: Omit<ProjectDoc, "id"> = stripUndefined({
       ...projectData,
       readmeContent,
       readmeFetchedAt,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-    };
+    });
 
     const id = await this.projectRepo.create(newProject);
 
@@ -165,7 +167,12 @@ export class ProjectService {
       }
     }
 
-    const updatedProject = await this.projectRepo.update(projectId, updatePayload);
+    const sanitizedPayload = stripUndefined(updatePayload);
+    const patchPayload = toFirestorePatch(sanitizedPayload as Record<string, unknown>);
+    const updatedProject = await this.projectRepo.update(
+      projectId,
+      patchPayload as Partial<ProjectDoc>
+    );
 
     logger.info("Project updated", {id: projectId});
 
@@ -197,16 +204,20 @@ export class ProjectService {
 
     const readmeContent = await fetchGitHubReadme(project.githubUrl);
 
-    const updatePayload: Partial<ProjectDoc> = {
+    const updatePayload: Partial<ProjectDoc> = stripUndefined({
       updatedAt: Timestamp.now(),
-    };
+    });
 
     if (readmeContent) {
       updatePayload.readmeContent = readmeContent;
       updatePayload.readmeFetchedAt = Timestamp.now();
     }
 
-    const updatedProject = await this.projectRepo.update(projectId, updatePayload);
+    const patchPayload = toFirestorePatch(updatePayload as Record<string, unknown>);
+    const updatedProject = await this.projectRepo.update(
+      projectId,
+      patchPayload as Partial<ProjectDoc>
+    );
 
     logger.info("Project README refreshed", {id: projectId});
 

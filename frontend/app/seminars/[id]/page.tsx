@@ -1,23 +1,29 @@
 import Link from "next/link";
 import {notFound} from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import SmartCover from "@/components/media/SmartCover";
 import {api} from "@/lib/api";
+import {normalizeUrl} from "@/lib/normalizeUrl";
 
 interface SeminarDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function SeminarDetailPage({params}: SeminarDetailPageProps) {
-  const {id} = params;
+  const {id} = await params;
 
-  let seminar;
-  try {
-    seminar = await api.getSeminar(id);
-  } catch (error) {
+  let seminar = await api.getSeminar(id).catch((error) => {
     console.error("Failed to fetch seminar", error);
-    notFound();
+    return null;
+  });
+
+  if (!seminar) {
+    const fallback = await api
+      .getSeminars({limit: 50})
+      .catch(() => ({data: []}));
+    seminar = fallback.data.find((item) => item.id === id) ?? null;
   }
 
   if (!seminar) {
@@ -28,7 +34,13 @@ export default async function SeminarDetailPage({params}: SeminarDetailPageProps
   if (seminar.coverImageId) {
     try {
       const image = await api.getImage(seminar.coverImageId);
-      coverImageUrl = image.url;
+      coverImageUrl = normalizeUrl(
+        image.url ||
+          (image as any).downloadUrl ||
+          (image as any).downloadURL ||
+          (image as any).imageUrl ||
+          (image as any).publicUrl
+      );
     } catch (error) {
       console.warn("Failed to resolve seminar cover image", error);
     }
@@ -66,15 +78,13 @@ export default async function SeminarDetailPage({params}: SeminarDetailPageProps
           </div>
         </div>
 
-        {coverImageUrl && (
-          <div className="overflow-hidden rounded-3xl border border-gray-100">
-            <img
-              src={coverImageUrl}
-              alt={seminar.title}
-              className="h-96 w-full object-cover"
-            />
-          </div>
-        )}
+        <SmartCover
+          src={coverImageUrl}
+          alt={seminar.title}
+          kind="seminar"
+          sizes="(max-width: 1024px) 100vw, 1024px"
+          className="rounded-3xl border border-gray-100"
+        />
 
         <div className="prose prose-lg max-w-none text-gray-800">
           <ReactMarkdown>{seminar.contentMd || ""}</ReactMarkdown>

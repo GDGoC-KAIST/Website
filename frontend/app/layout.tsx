@@ -1,144 +1,104 @@
 
 import "./globals.css";
-import {NavBar2} from './component/nav-bar'
-import Footer1 from './component/Footer1'
+import type {Metadata} from "next";
+import Image from "next/image";
+import {cookies} from "next/headers";
+import {Inter, JetBrains_Mono} from "next/font/google";
+import {NavBar2} from "./component/nav-bar";
+import Footer from "@/components/Footer";
+import {LanguageProvider} from "@/lib/i18n-context";
+import {BRAND} from "@/lib/brand";
+import {DEFAULT_LANGUAGE, getDict} from "@/lib/i18n";
+import PageTransition from "@/components/motion/PageTransition";
+
+const fontSans = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans-base",
+  display: "swap",
+});
+
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-base",
+  display: "swap",
+});
 
 
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Users,
-  MenuIcon,
-  BookOpen,
-  MessageCircle,
-  Info,
-  Phone,
-  Compass,
-  University,
-} from "lucide-react";
-
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const langCookie = cookieStore.get("gdgoc_lang")?.value;
+  const dict = getDict(langCookie);
+  return {
+    title: {
+      default: dict.seo.title,
+      template: `%s | ${dict.brand.full}`,
+    },
+    description: dict.seo.description,
+    openGraph: {
+      title: dict.seo.title,
+      siteName: dict.brand.full,
+      description: dict.seo.description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: dict.seo.title,
+      description: dict.seo.description,
+    },
+  };
+}
 
 const customMenuItems = [
-  {
-    title: "About",
-    url: "/about", // Base URL for products
-    subMenu: [
-      {
-        title: "GDG on Campus KAIST",
-        url: "/",
-        description: "GDG on Campus KAIST를 소개합니다.",
-        icon: <University />,
-      },
-      {
-        title: "동아리원",
-        url: "/",
-        description: "",
-        icon: <Users />,
-      },
-      {
-        title: "동아리 연락처",
-        url: "/products/categories",
-        description: "",
-        icon: <Phone />,
-      },
-    ],
-  },
-  {
-    title: "Blog",
-    url: "/blog", // Base URL for products
-    subMenu: [
-      {
-        title: "GDGoC KAIST",
-        url: "/blog",
-        description: "GDGoC KAIST를 소개합니다.",
-        icon: <University />,
-      },
-      {
-        title: "동아리원",
-        url: "/products/new",
-        description: "",
-        icon: <Users />,
-      },
-      {
-        title: "동아리 연락처",
-        url: "/products/categories",
-        description: "",
-        icon: <Phone />,
-      },
-    ],
-  },
-  {
-    title: "Members",
-    url: "/members",
-    subMenu: [
-      {
-        title: "Our Story",
-        url: "/members",
-        description: "Learn about our mission and values.",
-        icon: <BookOpen />,
-      },
-      {
-        title: "Team",
-        url: "/about/team",
-        description: "Meet the people behind our success.",
-        icon: <Users />,
-      },
-    ],
-  },
-  {
-    title: "Contact",
-    url: "/contact",
-    subMenu: [
-      {
-        title: "Help Center",
-        url: "/contact",
-        description: "Find answers to common questions.",
-        icon: <MessageCircle />,
-      },
-      {
-        title: "Contact Us",
-        url: "/support/contact",
-        description: "Get in touch with our support team.",
-        icon: <Phone />,
-      },
-      {
-        title: "FAQs",
-        url: "/support/faq",
-        description: "Frequently Asked Questions.",
-        icon: <Info />,
-      },
-    ],
-  },
+  {title: "Home", url: "/"},
+  {title: "About", url: "/about"},
+  {title: "Projects", url: "/projects"},
+  {title: "Seminars", url: "/seminars"},
+  {title: "Members", url: "/members"},
+  {title: "Contact", url: "/contact"},
 ];
 
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const lang = (cookieStore.get("gdgoc_lang")?.value === "ko" ? "ko" : DEFAULT_LANGUAGE);
+
   return (
-    <html lang="en">
-      <body>
+    <html lang={lang} className={`${fontSans.variable} ${fontMono.variable}`}>
+      <body className="pt-24">
+        <LanguageProvider>
           <NavBar2 
             authLinks={{ visible:false }}
+            isSticky
             domain={{
               logo: (
-                <div className = "flex size-8 bg-primary justify-center items-center">
-                  <img src="/gdgoc_icon.png" alt="gdgoc_icon"></img>
-                </div>
+                <Image
+                  src="/GDGoC KAIST Logo.png"
+                  alt={`${BRAND.shortName} logo`}
+                  width={312}
+                  height={94}
+                  priority
+                  className="object-contain"
+                  style={{height: "3.9rem", width: "auto"}}
+                />
               ),
+              name: null,
             }}
             navigationMenu={customMenuItems}
           />           
-        <main>
-          {children}
-        </main>
-        <div className='mt-32'>
-          <Footer1/>
+        <PageTransition>
+          <main className="pt-6">
+            {children}
+          </main>
+        </PageTransition>
+        <div className='mt-20'>
+          <Footer />
         </div>
+        </LanguageProvider>
       </body>
     </html>
   );
-
 }

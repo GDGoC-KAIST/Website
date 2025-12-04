@@ -3,10 +3,28 @@
  * 모든 함수를 모듈별로 분리하여 관리
  */
 
-import {setGlobalOptions} from "firebase-functions";
+import "dotenv/config";
+import {setGlobalOptions} from "firebase-functions/v2/options";
+import {onRequest as onRequestV2} from "firebase-functions/v2/https";
+import {
+  recruitApplyHandler,
+  recruitLoginHandler,
+  recruitUpdateHandler,
+  recruitResetHandler,
+  recruitConfigHandler,
+  recruitMeHandler,
+} from "./controllers/recruitController";
+import {
+  adminGetApplicationsHandler,
+  adminUpdateApplicationStatusHandler,
+  adminExportApplicationsHandler,
+  adminGetRecruitConfigHandler,
+  adminUpdateRecruitConfigHandler,
+} from "./controllers/adminRecruitController";
 
 // Firebase 초기화 (가장 먼저 실행되어야 함)
 import "./config/firebase";
+import "./utils/adminBootstrap";
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -79,5 +97,61 @@ export {
 // API 문서 관련 함수들
 export {apiDocs, apiSpec} from "./handlers/docs";
 
-// 테스트 관련 함수들
-export {testEmail} from "./controllers/testEmailController";
+// Seed/Admin bootstrap
+export {seedAdmin} from "./controllers/seedController";
+
+const recruitRequestOptions = {
+  secrets: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "SES_REGION"],
+};
+
+export const recruitApply = onRequestV2(
+  recruitRequestOptions,
+  recruitApplyHandler
+);
+
+export const recruitLogin = onRequestV2(
+  recruitRequestOptions,
+  recruitLoginHandler
+);
+
+export const recruitUpdate = onRequestV2(
+  recruitRequestOptions,
+  recruitUpdateHandler
+);
+
+export const recruitReset = onRequestV2(
+  recruitRequestOptions,
+  recruitResetHandler
+);
+
+export const recruitConfig = onRequestV2({}, recruitConfigHandler);
+
+export const recruitMe = onRequestV2(
+  recruitRequestOptions,
+  recruitMeHandler
+);
+
+export const adminGetApplications = onRequestV2(
+  recruitRequestOptions,
+  adminGetApplicationsHandler
+);
+
+export const adminUpdateApplicationStatus = onRequestV2(
+  recruitRequestOptions,
+  adminUpdateApplicationStatusHandler
+);
+
+export const adminExportApplications = onRequestV2(
+  recruitRequestOptions,
+  adminExportApplicationsHandler
+);
+
+export const adminGetRecruitConfig = onRequestV2(
+  recruitRequestOptions,
+  adminGetRecruitConfigHandler
+);
+
+export const adminUpdateRecruitConfig = onRequestV2(
+  recruitRequestOptions,
+  adminUpdateRecruitConfigHandler
+);

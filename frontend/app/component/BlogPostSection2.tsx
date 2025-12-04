@@ -2,6 +2,7 @@
 
 "use client";
 
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -306,11 +307,13 @@ const PostCard: React.FC<PostCardProp> = ({
         rel="noopener noreferrer"
         className="block h-full w-full"
       >
-        {/* Background Image */}
-        <img
+        <Image
           src={post.image}
           alt={post.title}
-          className="h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+          fill
+          unoptimized
+          sizes="(max-width: 1024px) 100vw, 410px"
+          className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
         />
 
         {/* Overlay */}
@@ -363,5 +366,4 @@ const PostCard: React.FC<PostCardProp> = ({
 };
 
 export default BlogPostSection2;
-
 

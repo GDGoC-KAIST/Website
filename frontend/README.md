@@ -29,6 +29,11 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Typography & Wrapping Guidelines
+
+- Automatic line wrapping must respect whitespace boundaries. Set `word-break: keep-all`, `overflow-wrap: normal`, and `hyphens: none` globally so that words/tokens are never split mid-word.
+- Reserve forced wraps (e.g., `.break-token` utility with `overflow-wrap: anywhere`) only for exceptional content such as long URLs, hashes, or IDs that would otherwise overflow their containers.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

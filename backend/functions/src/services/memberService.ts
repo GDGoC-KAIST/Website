@@ -2,6 +2,8 @@ import {Timestamp} from "firebase-admin/firestore";
 import {MemberData} from "../types/member";
 import {MemberRepository} from "../repositories/memberRepository";
 import * as logger from "firebase-functions/logger";
+import {stripUndefined} from "../utils/clean";
+import {toFirestorePatch} from "../utils/patch";
 
 // GitHub API를 통한 프로필 사진 가져오기
 async function fetchGitHubProfileImage(githubUsername: string): Promise<string> {
@@ -47,7 +49,7 @@ export class MemberService {
     // GitHub 프로필 사진 가져오기
     const profileImageUrl = await fetchGitHubProfileImage(githubUsername);
 
-    const memberData: Omit<MemberData, "id"> = {
+    const memberData: Omit<MemberData, "id"> = stripUndefined({
       name,
       email,
       department,
@@ -55,7 +57,7 @@ export class MemberService {
       profileImageUrl,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-    };
+    });
 
     const id = await this.memberRepo.create(memberData);
 
@@ -84,10 +86,16 @@ export class MemberService {
 
           // 프로필 사진이 변경된 경우 업데이트
           if (latestProfileImageUrl !== member.profileImageUrl) {
-            await this.memberRepo.update(member.id!, {
+            const updatePayload = stripUndefined({
               profileImageUrl: latestProfileImageUrl,
               updatedAt: Timestamp.now(),
             });
+            const patchPayload = toFirestorePatch(updatePayload as Record<string, unknown>);
+
+            await this.memberRepo.update(
+              member.id!,
+              patchPayload as Partial<MemberData>
+            );
 
             return {
               ...member,
@@ -122,10 +130,15 @@ export class MemberService {
       const latestProfileImageUrl = await fetchGitHubProfileImage(member.githubUsername);
 
       if (latestProfileImageUrl !== member.profileImageUrl) {
-        const updated = await this.memberRepo.update(member.id!, {
+        const updatePayload = stripUndefined({
           profileImageUrl: latestProfileImageUrl,
           updatedAt: Timestamp.now(),
         });
+        const patchPayload = toFirestorePatch(updatePayload as Record<string, unknown>);
+        const updated = await this.memberRepo.update(
+          member.id!,
+          patchPayload as Partial<MemberData>
+        );
         return updated;
       }
     } catch (error) {
@@ -151,7 +164,13 @@ export class MemberService {
       updatePayload.profileImageUrl = profileImageUrl;
     }
 
-    return await this.memberRepo.update(memberId, updatePayload);
+    const sanitizedPayload = stripUndefined(updatePayload);
+    const patchPayload = toFirestorePatch(sanitizedPayload as Record<string, unknown>);
+
+    return await this.memberRepo.update(
+      memberId,
+      patchPayload as Partial<MemberData>
+    );
   }
 
   // 멤버 삭제
@@ -160,4 +179,3 @@ export class MemberService {
     logger.info("Member deleted", {id: memberId});
   }
 }
-

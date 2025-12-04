@@ -1,8 +1,15 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import Link from "next/link";
+import {useEffect, useMemo, useState} from "react";
 import {api} from "@/lib/api";
+import {resolveThumbnailValue} from "@/lib/imageUtils";
+import {normalizeUrl} from "@/lib/normalizeUrl";
 import type {Project, ProjectStatus} from "@/lib/types";
+import CardSurface from "@/components/ui/cards/CardSurface";
+import {Button} from "@/components/ui/button";
+import SmartCover from "@/components/media/SmartCover";
+import StaggerList from "@/components/motion/StaggerList";
 
 interface ProjectListClientProps {
   initialProjects: Project[];
@@ -10,14 +17,52 @@ interface ProjectListClientProps {
 
 const LOAD_MORE_LIMIT = 10;
 
+type ProjectWithResolved = Project & {thumbnailResolvedUrl?: string};
+
+const isHttpUrl = (value?: string) => !!value && /^https?:\/\//i.test(value);
+
 export default function ProjectListClient({initialProjects}: ProjectListClientProps) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<ProjectWithResolved[]>(
+    initialProjects as ProjectWithResolved[]
+  );
   const [offset, setOffset] = useState(initialProjects.length);
   const [filterStatus, setFilterStatus] =
     useState<"all" | ProjectStatus>("all");
   const [filterSemester, setFilterSemester] = useState<string>("All");
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastFetchCount, setLastFetchCount] = useState(initialProjects.length);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateInitial = async () => {
+      const hydrated = await Promise.all(
+        (initialProjects as ProjectWithResolved[]).map(async (project) => {
+          let resolved = "";
+          if (isHttpUrl(project.thumbnailUrl)) {
+            resolved = normalizeUrl(project.thumbnailUrl || "");
+          } else if (project.thumbnailUrl) {
+            const value =
+              (await resolveThumbnailValue(project.thumbnailUrl).catch(
+                () => ""
+              )) || "";
+            resolved = value ? normalizeUrl(value) : "";
+          }
+          return {...project, thumbnailResolvedUrl: resolved};
+        })
+      );
+
+      if (!cancelled) {
+        setProjects(hydrated);
+      }
+    };
+
+    hydrateInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProjects]);
 
   const availableSemesters = useMemo(() => {
     const semesters = Array.from(
@@ -49,7 +94,25 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
       const res = await api
         .getProjects({limit: LOAD_MORE_LIMIT, offset})
         .catch(() => ({data: []}));
-      const newProjects = res.data || [];
+      const fetched = (res.data || []) as Project[];
+      const newProjects = await Promise.all(
+        fetched.map(async (project) => {
+          let resolved = "";
+          if (isHttpUrl(project.thumbnailUrl)) {
+            resolved = normalizeUrl(project.thumbnailUrl || "");
+          } else if (project.thumbnailUrl) {
+            const value =
+              (await resolveThumbnailValue(project.thumbnailUrl).catch(
+                () => ""
+              )) || "";
+            resolved = value ? normalizeUrl(value) : "";
+          }
+          return {
+            ...project,
+            thumbnailResolvedUrl: resolved,
+          };
+        })
+      );
 
       setProjects((prev) => [...prev, ...newProjects]);
       setOffset((prev) => prev + newProjects.length);
@@ -63,17 +126,17 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-2">
           {["all", "ongoing", "completed"].map((status) => (
             <button
               key={status}
               type="button"
               onClick={() => setFilterStatus(status as "all" | ProjectStatus)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                 filterStatus === status
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
               }`}
             >
               {status === "all"
@@ -82,12 +145,12 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
             </button>
           ))}
         </div>
-        <div>
-          <label className="mr-2 text-sm text-gray-500">Semester</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm text-gray-500">Semester</label>
           <select
             value={filterSemester}
             onChange={(event) => setFilterSemester(event.target.value)}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm"
+            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm pointer-events-auto focus:border-primary focus:outline-none"
           >
             <option value="All">All</option>
             {availableSemesters.map((semester) => (
@@ -104,23 +167,20 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
           No projects to display. Try adjusting filters or check back later.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <StaggerList as="div" className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => (
-            <article
+            <CardSurface
+              as="article"
+              hoverable
               key={project.id}
-              className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+              className="flex h-full flex-col overflow-hidden"
             >
-              {project.thumbnailUrl ? (
-                <div className="h-48 w-full overflow-hidden bg-gray-100">
-                  <img
-                    src={project.thumbnailUrl}
-                    alt={project.title}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="h-48 w-full bg-gray-100" />
-              )}
+              <SmartCover
+                src={project.thumbnailResolvedUrl}
+                alt={project.title}
+                kind="project"
+                sizes="(max-width: 1280px) 100vw, 33vw"
+              />
               <div className="flex flex-1 flex-col gap-4 p-6">
                 <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-500">
                   <span
@@ -153,28 +213,30 @@ export default function ProjectListClient({initialProjects}: ProjectListClientPr
                     </span>
                   )}
                 </div>
-                <a
+                <Link
                   href={`/projects/${project.id}`}
                   className="mt-auto text-sm font-semibold text-primary hover:underline"
                 >
                   View Details →
-                </a>
+                </Link>
               </div>
-            </article>
+            </CardSurface>
           ))}
-        </div>
+        </StaggerList>
       )}
 
       {showLoadMore && (
-        <div className="flex justify-center">
-          <button
+        <div className="flex justify-center pt-8">
+          <Button
             type="button"
+            variant="secondary"
+            size="lg"
+            className="px-8"
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="rounded-full bg-black px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {loadingMore ? "Loading..." : "Load More"}
-          </button>
+          </Button>
         </div>
       )}
     </div>

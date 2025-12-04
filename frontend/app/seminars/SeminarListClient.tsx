@@ -1,8 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import {useMemo, useState} from "react";
 import {api} from "@/lib/api";
+import {normalizeUrl} from "@/lib/normalizeUrl";
 import type {Seminar, SeminarType} from "@/lib/types";
+import CardSurface from "@/components/ui/cards/CardSurface";
+import {Button} from "@/components/ui/button";
+import SmartCover from "@/components/media/SmartCover";
+import StaggerList from "@/components/motion/StaggerList";
 
 export interface SeminarWithImage extends Seminar {
   coverImageUrl?: string;
@@ -92,17 +98,17 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-2">
           {["all", "invited", "internal"].map((type) => (
             <button
               key={type}
               type="button"
               onClick={() => setFilterType(type as "all" | SeminarType)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                 filterType === type
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
               }`}
             >
               {type === "all"
@@ -111,12 +117,12 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
             </button>
           ))}
         </div>
-        <div>
-          <label className="mr-2 text-sm text-gray-500">Semester</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm text-gray-500">Semester</label>
           <select
             value={filterSemester}
             onChange={(event) => setFilterSemester(event.target.value)}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm"
+            className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm pointer-events-auto focus:border-primary focus:outline-none"
           >
             <option value="All">All</option>
             {availableSemesters.map((semester) => (
@@ -133,23 +139,20 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
           No seminars to display. Try adjusting filters or check back later.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <StaggerList as="div" className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredSeminars.map((seminar) => (
-            <article
+            <CardSurface
+              as="article"
+              hoverable
               key={seminar.id}
-              className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+              className="flex h-full flex-col overflow-hidden"
             >
-              {seminar.coverImageUrl ? (
-                <div className="h-48 w-full overflow-hidden rounded-t-2xl bg-gray-100">
-                  <img
-                    src={seminar.coverImageUrl}
-                    alt={seminar.title}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="h-48 w-full rounded-t-2xl bg-gray-100" />
-              )}
+              <SmartCover
+                src={seminar.coverImageUrl ? normalizeUrl(seminar.coverImageUrl) : undefined}
+                alt={seminar.title}
+                kind="seminar"
+                sizes="(max-width: 1280px) 100vw, 33vw"
+              />
               <div className="flex flex-1 flex-col gap-4 p-6">
                 <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-500">
                   <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
@@ -172,28 +175,30 @@ export default function SeminarListClient({initialSeminars}: SeminarListClientPr
                 <p className="text-sm text-gray-600 line-clamp-3">
                   {seminar.summary}
                 </p>
-                <a
+                <Link
                   href={`/seminars/${seminar.id}`}
                   className="text-sm font-semibold text-primary hover:underline"
                 >
                   View Details →
-                </a>
+                </Link>
               </div>
-            </article>
+            </CardSurface>
           ))}
-        </div>
+        </StaggerList>
       )}
 
       {showLoadMore && (
         <div className="flex justify-center">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="lg"
+            className="px-8"
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="rounded-full bg-black px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {loadingMore ? "Loading..." : "Load More"}
-          </button>
+          </Button>
         </div>
       )}
     </div>

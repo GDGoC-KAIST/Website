@@ -1,6 +1,8 @@
 import {SeminarDoc, SeminarType} from "../types/seminar";
 import {SeminarRepository} from "../repositories/seminarRepository";
 import {ImageRepository} from "../repositories/imageRepository";
+import {stripUndefined} from "../utils/clean";
+import {toFirestorePatch} from "../utils/patch";
 
 const SEMESTER_REGEX = /^\d{4}-[12]$/;
 
@@ -47,11 +49,11 @@ export class SeminarService {
     await this.validateCoverImage(seminarData.coverImageId);
 
     const now = Date.now();
-    const newSeminar: Omit<SeminarDoc, "id"> = {
+    const newSeminar: Omit<SeminarDoc, "id"> = stripUndefined({
       ...seminarData,
       createdAt: now,
       updatedAt: now,
-    };
+    });
 
     const id = await this.seminarRepo.create(newSeminar);
 
@@ -115,7 +117,13 @@ export class SeminarService {
       updatedAt: Date.now(),
     };
 
-    return await this.seminarRepo.update(seminarId, payload);
+    const sanitizedPayload = stripUndefined(payload);
+    const patchPayload = toFirestorePatch(sanitizedPayload as Record<string, unknown>);
+
+    return await this.seminarRepo.update(
+      seminarId,
+      patchPayload as Partial<SeminarDoc>
+    );
   }
 
   async deleteSeminar(seminarId: string): Promise<void> {

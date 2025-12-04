@@ -123,8 +123,8 @@ import {
   MdPerson,
   MdTravelExplore,
   MdWorkspaces,
+  MdWorkHistory,
 } from "react-icons/md";
-import { IconType } from "react-icons/lib";
 import { MdFavoriteBorder } from "react-icons/md";
 import {
   DropdownMenu,
@@ -284,7 +284,7 @@ const ContentCardSkeleton = ({
 
 const ContentCard = React.memo(function ContentCard({
   id,
-  icon: IconType,
+  icon,
   title,
   subTitle,
   content,
@@ -320,7 +320,7 @@ const ContentCard = React.memo(function ContentCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 flex-col w-full ">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex justify-center items-center text-primary">
-              
+              {icon ?? <MdWorkHistory size={28} />}
             </div>
 
             <div className="text-center">
@@ -474,6 +474,7 @@ export default function ContentCards1({
       showFooter,
       classNameCard,
       dropDownMenu,
+      onTitleClicked,
     ]
   );
 
@@ -497,5 +498,3 @@ export default function ContentCards1({
     </div>
   );
 }
-
-

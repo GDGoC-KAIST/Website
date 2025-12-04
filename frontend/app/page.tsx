@@ -1,54 +1,48 @@
-
+import HeroBanner from "./(home)/components/HeroBanner";
+import SectionWhatWeDo from "./(home)/components/SectionWhatWeDo";
+import SectionFeaturedProjects from "./(home)/components/SectionFeaturedProjects";
+import SectionContact from "./(home)/components/SectionContact";
+import SectionStats from "./(home)/components/SectionStats";
+import SectionRecruitCTA from "./(home)/components/SectionRecruitCTA";
 import {api} from "@/lib/api";
-import FeatureSection7, {SeminarWithImage} from "./component/FeatureSection7";
+import {getRecruitConfig} from "@/lib/recruitApi";
+import {pickFeaturedProjects} from "@/lib/featured";
+import {resolveThumbnailValue} from "@/lib/imageUtils";
 
 export default async function Home() {
-  const [projectsRes, seminarsRes] = await Promise.all([
-    api.getProjects({limit: 6, status: "ongoing"}).catch(() => ({data: []})),
+  const [projectsRes, seminarsRes, membersRes, recruitConfig] = await Promise.all([
+    api.getProjects({limit: 20}).catch(() => ({data: []})),
     api.getSeminars({limit: 6}).catch(() => ({data: []})),
+    api.getMembers({limit: 50}).catch(() => ({data: []})),
+    getRecruitConfig().catch(() => null),
   ]);
 
-  const projects = projectsRes.data || [];
-  const seminars = seminarsRes.data || [];
-
-  const seminarImageResults = await Promise.allSettled(
-    seminars.map(async (seminar) => {
-      if (!seminar.coverImageId) {
-        return {seminarId: seminar.id, coverImageUrl: undefined};
-      }
-      try {
-        const image = await api.getImage(seminar.coverImageId);
-        return {seminarId: seminar.id, coverImageUrl: image.url};
-      } catch {
-        return {seminarId: seminar.id, coverImageUrl: undefined};
-      }
+  const allProjects = projectsRes.data || [];
+  const projectsWithThumbnails = await Promise.all(
+    allProjects.map(async (project) => {
+      const thumbnailUrl =
+        (await resolveThumbnailValue(project.thumbnailUrl)) || project.thumbnailUrl;
+      return {...project, thumbnailUrl};
     })
   );
 
-  const coverImageMap = new Map<string, string | undefined>();
-  seminarImageResults.forEach((result) => {
-    if (result.status === "fulfilled") {
-      coverImageMap.set(result.value.seminarId, result.value.coverImageUrl);
-    }
-  });
-
-  const seminarsWithImages: SeminarWithImage[] = seminars.map((seminar) => ({
-    ...seminar,
-    coverImageUrl: coverImageMap.get(seminar.id),
-  }));
+  const featuredProjects = pickFeaturedProjects(projectsWithThumbnails, 3);
+  const membersCount = membersRes.data?.length ?? 0;
+  const sessionsCount = seminarsRes.data?.length ?? 0;
+  const projectsCount = allProjects.length;
 
   return (
-    <div>
-      <div className="flex justify-center items-center h-screen">
-        <img className="max-w-full h-auto" src="/gdgoc_icon.png" />
-      </div>
-
-      <FeatureSection7
-        mainHeading={{text: "GDG on Campus KAIST"}}
-        subHeading={{text: "We are Google Developer Group on Campus KAIST"}}
-        recentProjects={projects}
-        recentSeminars={seminarsWithImages}
+    <div className="space-y-24 pb-24">
+      <HeroBanner />
+      <SectionWhatWeDo />
+      <SectionStats
+        membersCount={membersCount}
+        sessionsCount={sessionsCount}
+        projectsCount={projectsCount}
       />
+      <SectionFeaturedProjects projects={featuredProjects} />
+      <SectionRecruitCTA config={recruitConfig} />
+      <SectionContact />
     </div>
   );
 }

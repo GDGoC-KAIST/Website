@@ -3,6 +3,8 @@ import {ImageData} from "../types/image";
 import {ImageRepository} from "../repositories/imageRepository";
 import {StorageRepository} from "../repositories/storageRepository";
 import * as logger from "firebase-functions/logger";
+import {stripUndefined} from "../utils/clean";
+import {toFirestorePatch} from "../utils/patch";
 
 // 비즈니스 로직 레이어
 export class ImageService {
@@ -32,14 +34,14 @@ export class ImageService {
     );
 
     // Firestore에 메타데이터 저장
-    const imageData: Omit<ImageData, "id"> = {
+    const imageData: Omit<ImageData, "id"> = stripUndefined({
       name,
       description,
       url,
       storagePath,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-    };
+    });
 
     const id = await this.imageRepo.create(imageData);
 
@@ -84,7 +86,13 @@ export class ImageService {
       ...updateData,
     };
 
-    return await this.imageRepo.update(imageId, updatePayload);
+    const sanitizedPayload = stripUndefined(updatePayload);
+    const patchPayload = toFirestorePatch(sanitizedPayload as Record<string, unknown>);
+
+    return await this.imageRepo.update(
+      imageId,
+      patchPayload as Partial<ImageData>
+    );
   }
 
   // 이미지 삭제
@@ -112,4 +120,3 @@ export class ImageService {
     logger.info("Image deleted", {id: imageId});
   }
 }
-

@@ -20,9 +20,14 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/json2csv": "^5.0.7",
     "firebase-tools": "^13.0.0"
   },
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "bcrypt": "^6.0.0",
+    "json2csv": "^6.0.0-alpha.2",
     "react-markdown": "^10.1.0"
   }
 }

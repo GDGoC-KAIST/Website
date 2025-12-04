@@ -1,5 +1,35 @@
 import {api} from "@/lib/api";
+import {BRAND} from "@/lib/brand";
 import SeminarListClient, {SeminarWithImage} from "./SeminarListClient";
+import type {BilingualIntro} from "../component/PageIntro";
+import PageHero from "@/components/layout/PageHero";
+import {SEMINARS_HERO_IMAGES} from "@/lib/heroImages";
+
+const seminarsHeroCopy = {
+  en: {
+    description:
+      "From invited Google engineers to internal workshops, explore our latest conversations on tech and community.",
+  },
+  ko: {
+    description:
+      "Google 엔지니어 초청 강연부터 내부 워크숍까지, 기술과 커뮤니티 이야기를 함께 나눕니다.",
+  },
+};
+
+const seminarsIntro: BilingualIntro = {
+  ko: {
+    eyebrow: "세미나",
+    title: `${BRAND.shortName}의 세미나와 세션`,
+    description:
+      "Google 엔지니어 초청 강연부터 내부 워크숍까지, 기술과 커뮤니티 이야기를 함께 나눕니다.",
+  },
+  en: {
+    eyebrow: "Seminars",
+    title: `Learnings from ${BRAND.shortName}`,
+    description:
+      "From invited Google engineers to internal workshops, explore our latest conversations on tech and community.",
+  },
+};
 
 export default async function SeminarsPage() {
   const seminarsRes = await api
@@ -34,21 +64,18 @@ export default async function SeminarsPage() {
   }));
 
   return (
-    <div className="px-6 py-16 lg:px-12">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="text-sm uppercase tracking-wide text-gray-500">
-          Seminars
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold">
-          Learnings from GDG on Campus KAIST
-        </h1>
-        <p className="mt-4 text-gray-600">
-          Explore our invited talks and internal workshops covering the latest
-          in technology, product, and community building.
-        </p>
-      </div>
+    <div className="space-y-12 pb-16">
+      <PageHero
+        images={SEMINARS_HERO_IMAGES}
+        eyebrow="SEMINARS"
+        title={`Learnings from ${BRAND.shortName}`}
+        description="From invited Google engineers to internal workshops, explore our latest conversations on tech and community."
+        variant="compact"
+        sticker={{name: "slider", size: 160}}
+        bilingualCopy={seminarsHeroCopy}
+      />
 
-      <div className="mx-auto mt-12 max-w-6xl">
+      <div className="mx-auto max-w-6xl px-6">
         <SeminarListClient initialSeminars={seminarsWithImages} />
       </div>
     </div>

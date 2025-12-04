@@ -9,7 +9,6 @@ import Image from "next/image";
 import React, {
   ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -96,7 +95,7 @@ export const DEFULT_POSTS: Post[] = [
     title: "Mastering SEO for Bloggers",
     createdAt: "2024-07-25T09:00:00Z",
     subtitle: "Boost Your Blog's Visibility and Organic Traffic",
-    icons: [<FaGooglePlusG size={20} />],
+    icons: [<FaGooglePlusG key="seo-google-plus" size={20} />],
     description:
       "A comprehensive guide covering essential SEO strategies for bloggers, including keyword research, on-page optimization, link building, and technical SEO tips to rank higher.",
     images: [
@@ -123,7 +122,7 @@ export const DEFULT_POSTS: Post[] = [
     title: "Content Creation Workflow",
     createdAt: "2024-07-20T11:30:00Z",
     subtitle: "Streamline Your Blogging Process from Idea to Publish",
-    icons: [<FaPencilAlt size={20} />],
+    icons: [<FaPencilAlt key="workflow-pencil" size={20} />],
     description:
       "Discover an efficient workflow for content creation that helps you generate ideas, write compelling drafts, edit effectively, and schedule your posts for consistency.",
     images: [
@@ -150,7 +149,7 @@ export const DEFULT_POSTS: Post[] = [
     title: "Choosing the Right Blogging Platform",
     createdAt: "2024-07-18T15:00:00Z",
     subtitle: "WordPress, Medium, Substack, or Custom? Find Your Fit",
-    icons: [<FaWordpress size={20} />],
+    icons: [<FaWordpress key="platform-wordpress" size={20} />],
     description:
       "An in-depth comparison of popular blogging platforms, highlighting their pros and cons regarding flexibility, monetization, ease of use, and community features.",
     images: [
@@ -237,7 +236,7 @@ export const DEFULT_POSTS: Post[] = [
     title: "Analytics for Bloggers: Understanding Your Data",
     createdAt: "2024-06-28T16:00:00Z",
     subtitle: "Leverage Google Analytics to Improve Blog Performance",
-    icons: [<FaGooglePlusG size={20} />],
+    icons: [<FaGooglePlusG key="analytics-google-plus" size={20} />],
     description:
       "Learn how to interpret blog analytics to understand reader behavior, identify popular content, track traffic sources, and make data-driven decisions to grow your blog.",
     images: [
@@ -329,15 +328,18 @@ function PostsPage({
   }, []);
 
   const handleSearchChange: React.ChangeEventHandler<HTMLInputElement> =
-    useCallback((e) => {
-      const value = e.target.value;
+    useCallback(
+      (e) => {
+        const value = e.target.value;
 
-      if (search) {
-        search.setInputValue(value);
-      } else {
-        setLocalSearchInput(value);
-      }
-    }, []);
+        if (search) {
+          search.setInputValue(value);
+        } else {
+          setLocalSearchInput(value);
+        }
+      },
+      [search]
+    );
 
   const clearInputText = useCallback(() => {
     if (search) {
@@ -345,7 +347,7 @@ function PostsPage({
     } else {
       setLocalSearchInput("");
     }
-  }, []);
+  }, [search]);
 
   return (
     <article className="max-w-7xl mx-auto px-4  ">
@@ -478,11 +480,9 @@ const PostsList = ({
   pagination: NonNullable<PostsPageProps<Post>["pagination"]>;
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage, setProductsPerPage] = useState(1);
-
-  useEffect(() => {
-    setProductsPerPage(pagination.postsPerPage);
-  }, []);
+  const [productsPerPage, setProductsPerPage] = useState(
+    () => pagination.postsPerPage
+  );
 
   const allCategories = posts.map((post) => post.category);
 
@@ -522,7 +522,7 @@ const PostsList = ({
     }
 
     return products;
-  }, [searchInputValue, selectedCategory]);
+  }, [posts, searchInputValue, selectedCategory]);
 
   // Handle category selection
   const handleCategorySelect = useCallback((selectedCategory: string) => {
@@ -682,7 +682,7 @@ const PostsList = ({
           <>
             {paginationData.currentProducts.map((product) => (
               <article
-                key={product.id}
+                key={product.id ?? product.title}
                 className="gap-10 mb-36 items-start flex justify-between max-lg:flex-col"
               >
                 {/* Left Side - Product Info */}
@@ -861,22 +861,6 @@ const PostsList = ({
 };
 
 const ProductSkeleton: React.FC = () => {
-  // These mimic your getImageClasses and getImageSizes logic for skeleton dimensions
-  // For simplicity, we'll use fixed dimensions that approximate the layout.
-  const getImageClasses = (index: number) => {
-    const baseClasses = "relative aspect-square overflow-hidden ";
-    switch (index) {
-      case 0:
-        return `${baseClasses} rounded-lg block w-full sm:w-60`; // Main image
-      case 1:
-        return `${baseClasses} rounded-md hidden sm:block w-60`; // Second image
-      case 2:
-        return `${baseClasses} rounded-md hidden xl:block w-60`; // Third image
-      default:
-        return `${baseClasses} rounded-md hidden w-60`; // Additional hidden images
-    }
-  };
-
   return (
     <article className="gap-10 mb-36 items-start flex justify-between max-lg:flex-col animate-pulse">
       {/* Left Side - Product Info Skeleton */}
@@ -977,5 +961,3 @@ const generatePaginationItems = (currentPage: number, totalPages: number) => {
     totalPages,
   ];
 };
-
-

@@ -1,110 +1,63 @@
-import * as nodemailer from "nodemailer";
-import * as logger from "firebase-functions/logger";
+import AWS from "aws-sdk";
 
-// 이메일 발송 유틸리티
-export interface EmailOptions {
+const region = process.env.SES_REGION || "ap-northeast-2";
+const ses = new AWS.SES({
+  apiVersion: "2010-12-01",
+  region,
+  credentials: new AWS.Credentials({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  }),
+});
+
+export interface SendEmailPayload {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }
 
-// 이메일 발송 함수
-export async function sendEmail(options: EmailOptions): Promise<void> {
-  // 환경 변수에서 이메일 설정 가져오기
-  const emailUser = process.env.EMAIL_USER;
-  const emailPassword = process.env.EMAIL_PASSWORD;
-  const emailHost = process.env.EMAIL_HOST || "smtp.gmail.com";
-  const emailPort = parseInt(process.env.EMAIL_PORT || "587");
-
-  const isEmulator = process.env.FUNCTIONS_EMULATOR;
-
-  // 디버깅: 환경 변수 확인 (비밀번호는 마스킹)
-  logger.info("Email sending attempt", {
-    hasEmailUser: !!emailUser,
-    emailUser: emailUser ? `${emailUser.substring(0, 3)}***` : "not set",
-    hasEmailPassword: !!emailPassword,
-    emailPassword: emailPassword ? "***" : "not set",
-    emailHost,
-    emailPort,
-    isEmulator: !!isEmulator,
-    to: options.to,
-    subject: options.subject,
-  });
-
-  // 이메일 설정이 없으면 에러 (로컬/프로덕션 모두)
-  if (!emailUser || !emailPassword) {
-    if (isEmulator) {
-      // 에뮬레이터 환경에서 설정이 없으면 로그만 출력
-      logger.warn("Email credentials not configured. Email not sent (emulator).", {
-        to: options.to,
-        subject: options.subject,
-        hint: "Set EMAIL_USER and EMAIL_PASSWORD in .env file to send real emails",
-        envFileLocation: "backend/functions/.env",
-      });
-      logger.info("Email content (would be sent):", options.html);
-      return;
-    } else {
-      // 프로덕션 환경에서는 에러 발생
-      logger.warn("Email credentials not configured. Email not sent.", {
-        to: options.to,
-        subject: options.subject,
-      });
-      throw new Error(
-        "Email credentials not configured. " +
-        "Please set EMAIL_USER and EMAIL_PASSWORD environment variables."
-      );
-    }
-  }
-
-  // nodemailer transporter 생성
-  const transporter = nodemailer.createTransport({
-    host: emailHost,
-    port: emailPort,
-    secure: emailPort === 465, // 465 포트는 SSL 사용
-    auth: {
-      user: emailUser,
-      pass: emailPassword,
-    },
-  });
-
-  // 이메일 발송
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailPayload): Promise<void> {
   try {
-    logger.info("Attempting to send email via SMTP", {
-      host: emailHost,
-      port: emailPort,
-      from: emailUser,
-      to: options.to,
-    });
-
-    const info = await transporter.sendMail({
-      from: `"GDGoC" <${emailUser}>`,
-      to: options.to,
-      subject: options.subject,
-      text: options.text || options.html.replace(/<[^>]*>/g, ""),
-      html: options.html,
-    });
-
-    logger.info("Email sent successfully", {
-      to: options.to,
-      subject: options.subject,
-      messageId: info.messageId,
-      response: info.response,
-    });
+    await ses
+      .sendEmail({
+        Source: "noreply@gdgockaist.com",
+        Destination: {
+          ToAddresses: [to],
+        },
+        Message: {
+          Subject: {
+            Charset: "UTF-8",
+            Data: subject,
+          },
+          Body: {
+            Html: {
+              Charset: "UTF-8",
+              Data: html,
+            },
+            ...(text
+              ? {
+                Text: {
+                  Charset: "UTF-8",
+                  Data: text,
+                },
+              }
+              : {}),
+          },
+        },
+      })
+      .promise();
   } catch (error) {
-    logger.error("Failed to send email", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      to: options.to,
-      subject: options.subject,
-      host: emailHost,
-      port: emailPort,
-    });
+    console.error("Failed to send email via SES", error);
     throw error;
   }
 }
 
-// 가입 요청 알림 이메일 생성
 export function createRegistrationRequestEmail(
   adminEmail: string,
   userName: string,
@@ -112,7 +65,7 @@ export function createRegistrationRequestEmail(
   githubUsername: string,
   approveUrl: string,
   rejectUrl: string
-): EmailOptions {
+): SendEmailPayload {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -174,4 +127,3 @@ GitHub: ${githubUsername}
     text,
   };
 }
-

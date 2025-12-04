@@ -54,3 +54,12 @@ export interface ImageDoc {
   description?: string;
   url: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  githubUsername: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: number;
+}
