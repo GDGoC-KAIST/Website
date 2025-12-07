@@ -1,46 +1,40 @@
 import {Router} from "express";
 import {apply, login, me, updateMe, resetPassword, config} from "../../controllers/v2/recruitController";
-import {rateLimit} from "../../middleware/rateLimiter";
-import {validateRequest} from "../../middleware/validateRequest";
+import {rateLimit, MemoryRateLimitStore} from "../../middleware/rateLimiter";
 import {recruitAuthMiddleware} from "../../middleware/recruitAuthMiddleware";
-import {
-  recruitApplySchema,
-  recruitLoginSchema,
-  recruitUpdateSchema,
-  recruitResetSchema,
-} from "../../validators/schemas/recruitSchemas";
+import {recruitLegacyErrorBridge} from "../../middleware/recruitLegacyErrorBridge";
 
 const recruitRouter = Router();
+
+// Create dedicated stores for recruit endpoints (exported for testing)
+export const recruitApplyStore = new MemoryRateLimitStore();
+export const recruitLoginStore = new MemoryRateLimitStore();
 
 const applyLimiter = rateLimit({
   windowMs: 60_000,
   max: 5,
-  keyGenerator: (req) => req.ip || req.headers["x-forwarded-for"]?.toString() || "unknown",
+  keyGenerator: (req) => req.ip || "unknown",
+  store: recruitApplyStore,
 });
 
 const loginLimiter = rateLimit({
   windowMs: 60_000,
   max: 20,
-  keyGenerator: (req) => req.ip || req.headers["x-forwarded-for"]?.toString() || "unknown",
+  keyGenerator: (req) => req.ip || "unknown",
+  store: recruitLoginStore,
 });
 
 // Public endpoints
-recruitRouter.post(
-  "/applications",
-  applyLimiter,
-  validateRequest({body: recruitApplySchema}),
-  apply
-);
-recruitRouter.post("/login", loginLimiter, validateRequest({body: recruitLoginSchema}), login);
+recruitRouter.post("/applications", applyLimiter, apply);
+recruitRouter.post("/login", loginLimiter, login);
+recruitRouter.post("/reset-password", resetPassword);
 recruitRouter.get("/config", config);
-recruitRouter.post(
-  "/reset-password",
-  validateRequest({body: recruitResetSchema}),
-  resetPassword
-);
 
 // Protected endpoints (require Bearer token from recruitSessions)
-recruitRouter.get("/me", recruitAuthMiddleware, me);
-recruitRouter.patch("/me", recruitAuthMiddleware, validateRequest({body: recruitUpdateSchema}), updateMe);
+recruitRouter.use(recruitAuthMiddleware);
+recruitRouter.get("/me", me);
+recruitRouter.patch("/me", updateMe);
+
+recruitRouter.use(recruitLegacyErrorBridge);
 
 export {recruitRouter};

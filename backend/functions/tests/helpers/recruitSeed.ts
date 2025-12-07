@@ -8,12 +8,14 @@ const db = getFirestore();
  * @param email - Email address for the session
  * @returns Object with token and normalized email
  */
-export async function seedRecruitSession(email: string) {
-  const token = crypto.randomBytes(32).toString("hex");
+export async function seedRecruitSession(email: string, overrides: Record<string, any> = {}) {
   const normalizedEmail = email.trim().toLowerCase();
+  const token = overrides.token || crypto.randomBytes(32).toString("hex");
+  const {token: _ignoredToken, ...rest} = overrides;
   await db.collection("recruitSessions").doc(token).set({
     email: normalizedEmail,
     createdAt: Timestamp.now(),
+    ...rest,
   });
   return {token, email: normalizedEmail};
 }
@@ -61,8 +63,8 @@ export async function seedRecruitApplication(
 export async function seedRecruitConfig(isOpen: boolean = true) {
   await db.collection("recruitConfig").doc("current").set({
     isOpen,
-    openAt: Timestamp.now(),
-    closeAt: Timestamp.fromMillis(Date.now() + 86400000), // 24 hours from now
+    openAt: Timestamp.fromMillis(Date.now() - 3600_000),
+    closeAt: Timestamp.fromMillis(Date.now() + 86400_000),
     messageWhenClosed: "Recruiting is currently closed.",
     semester: "2024-Fall",
   });

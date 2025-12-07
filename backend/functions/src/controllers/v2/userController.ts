@@ -34,7 +34,54 @@ export async function patchMe(
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
-    const profile = await userService.updateProfile(user.sub, req.body ?? {});
+    const body = req.body ?? {};
+    const allowedFields = ["name", "phone", "department", "studentId", "profileImage"];
+    const forbiddenFields = ["role", "roles", "uid", "id", "email", "createdAt", "updatedAt"];
+
+    const keys = Object.keys(body);
+    if (keys.length === 0) {
+      throw new AppError(400, "VALIDATION_ERROR", "No fields to update");
+    }
+
+    for (const field of keys) {
+      if (forbiddenFields.includes(field)) {
+        throw new AppError(403, "FORBIDDEN", "Cannot update restricted fields");
+      }
+      if (!allowedFields.includes(field)) {
+        throw new AppError(400, "INVALID_INPUT", `Invalid field: ${field}`);
+      }
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+
+    const stringFields: Array<{key: string; target: string}> = [
+      {key: "name", target: "name"},
+      {key: "phone", target: "phone"},
+      {key: "department", target: "department"},
+      {key: "studentId", target: "studentId"},
+    ];
+
+    for (const {key, target} of stringFields) {
+      if (key in body) {
+        if (typeof body[key] !== "string") {
+          throw new AppError(400, "INVALID_INPUT", `Invalid field: ${key}`);
+        }
+        updatePayload[target] = (body[key] as string).trim();
+      }
+    }
+
+    if ("profileImage" in body) {
+      const value = body.profileImage;
+      if (value === null || value === "") {
+        updatePayload.profileImageUrl = null;
+      } else if (typeof value === "string") {
+        updatePayload.profileImageUrl = value;
+      } else {
+        throw new AppError(400, "INVALID_INPUT", "Invalid field: profileImage");
+      }
+    }
+
+    const profile = await userService.updateProfile(user.sub, updatePayload);
     res.status(200).json({user: serializeUser(profile)});
   } catch (error) {
     next(error);

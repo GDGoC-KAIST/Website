@@ -57,13 +57,13 @@ export class MailjetProvider implements EmailProvider {
   }
 
   async send(input: SendEmailInput): Promise<void> {
+    // CRITICAL: In test environment, NEVER initialize or call Mailjet SDK
+    if (process.env.NODE_ENV === "test" || env.nodeEnv === "test") {
+      console.log(`[MockEmail] To: ${input.to}, Subject: ${input.subject}`);
+      return;
+    }
+
     if (!this.client) {
-      if (env.nodeEnv === "test") {
-        console.info(`[mailjet:mock] ${input.subject} -> ${input.to}`, {
-          reason: "Mailjet client unavailable",
-        });
-        return;
-      }
       throw new AppError(500, ErrorCode.INTERNAL_ERROR, "Mailjet credentials are not configured");
     }
 
@@ -91,10 +91,6 @@ export class MailjetProvider implements EmailProvider {
       ...(input.text ? {TextPart: input.text} : {}),
     };
 
-    if (env.nodeEnv === "test") {
-      message.SandboxMode = true;
-    }
-
     try {
       const result = (await this.client
         .post("send", {version: "v3.1"})
@@ -117,7 +113,6 @@ export class MailjetProvider implements EmailProvider {
         recipients: recipients.length,
         status,
         messageIds,
-        sandbox: Boolean(message.SandboxMode),
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

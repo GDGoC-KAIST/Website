@@ -9,7 +9,7 @@ function sortKeys<T>(input: T): T {
     return input.map((item) => sortKeys(item)) as T;
   }
 
-if (input && typeof input === "object") {
+  if (input && typeof input === "object") {
     const record = input as Record<string, unknown>;
     const sorted: Record<string, unknown> = {};
     for (const key of Object.keys(record).sort()) {

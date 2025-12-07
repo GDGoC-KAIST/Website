@@ -5,7 +5,7 @@ import {Timestamp} from "firebase-admin/firestore";
 import {db} from "../config/firebase";
 import {RecruitApplication} from "../types/recruit";
 import {hashPassword, comparePassword} from "../utils/security";
-import {sendEmail} from "../utils/email";
+import {enqueueOutboxMessage} from "../outbox/recruitOutbox";
 import {setCorsHeaders} from "../utils/cors";
 import {normalizeEmail, assertApplicationOpen} from "../utils/recruitHelpers";
 import {readRecruitConfig, serializeRecruitConfig} from "../utils/recruitConfig";
@@ -14,6 +14,7 @@ const APPLICATIONS = "recruitApplications";
 const SESSIONS = "recruitSessions";
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
+const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 function withCors(
   request: Request,
@@ -34,7 +35,10 @@ function handleControllerError(
 ): void {
   const status = (error as {status?: number})?.status ?? defaultStatus;
   const message = error instanceof Error ? error.message : "Unknown error";
-  logger.error("Recruit controller error", {message, error});
+  // Only log server errors (5xx), not client errors (4xx)
+  if (status >= 500) {
+    logger.error("Recruit controller error", {message, error, status});
+  }
   response.status(status).json({error: message});
 }
 
@@ -51,6 +55,7 @@ async function createSession(email: string): Promise<string> {
   await db.collection(SESSIONS).doc(token).set({
     email,
     createdAt: Timestamp.now(),
+    expiresAt: Timestamp.fromMillis(Date.now() + SESSION_TTL_MS),
   });
   return token;
 }
@@ -89,9 +94,8 @@ async function loadApplication(email: string): Promise<RecruitApplication | null
   return snap.data() as RecruitApplication;
 }
 
-async function sendConfirmationEmail(to: string, name: string): Promise<void> {
-  await sendEmail({
-    to,
+async function queueConfirmationEmail(to: string, name: string): Promise<void> {
+  await enqueueOutboxMessage("recruit.applicationReceived", to, {
     subject: "[GDGoC KAIST] Application received",
     html: `
       <p>Hi ${name},</p>
@@ -101,12 +105,11 @@ async function sendConfirmationEmail(to: string, name: string): Promise<void> {
   });
 }
 
-async function sendTempPasswordEmail(
+async function queueTempPasswordEmail(
   to: string,
   tempPassword: string
 ): Promise<void> {
-  await sendEmail({
-    to,
+  await enqueueOutboxMessage("recruit.temporaryPassword", to, {
     subject: "[GDGoC KAIST] Temporary password",
     html: `
       <p>Too many unsuccessful login attempts have locked your recruiting account.</p>
@@ -202,10 +205,21 @@ export async function recruitApplyHandler(
     await docRef.set(application);
 
     const confirmationTarget = application.googleEmail || application.kaistEmail;
-    await sendConfirmationEmail(confirmationTarget, application.name);
+    await queueConfirmationEmail(confirmationTarget, application.name);
 
     response.status(201).json({success: true});
+    console.info("Recruit Apply Attempt", {
+      outcome: "success",
+      ipHash: request.telemetry?.ipHash,
+      uaSummary: request.telemetry?.uaSummary,
+    });
   } catch (error) {
+    console.warn("Recruit Apply Failed", {
+      outcome: "error",
+      ipHash: request.telemetry?.ipHash,
+      uaSummary: request.telemetry?.uaSummary,
+      message: error instanceof Error ? error.message : String(error),
+    });
     handleControllerError(response, error);
   }
 }
@@ -256,6 +270,11 @@ export async function recruitLoginHandler(
 
       const token = await createSession(normalizedEmail);
       response.status(200).json({success: true, token});
+      console.info("Recruit Login Attempt", {
+        outcome: "success",
+        ipHash: request.telemetry?.ipHash,
+        uaSummary: request.telemetry?.uaSummary,
+      });
       return;
     }
 
@@ -278,7 +297,7 @@ export async function recruitLoginHandler(
 
       await docRef.update(updates);
 
-      await sendTempPasswordEmail(
+      await queueTempPasswordEmail(
         application.googleEmail || application.kaistEmail,
         tempPassword
       );
@@ -286,12 +305,28 @@ export async function recruitLoginHandler(
       response.status(423).json({
         error: "Account locked after too many failed attempts. Check your email.",
       });
+      console.warn("Recruit Login Failed", {
+        outcome: "locked",
+        ipHash: request.telemetry?.ipHash,
+        uaSummary: request.telemetry?.uaSummary,
+      });
       return;
     }
 
     await docRef.update(updates);
     response.status(401).json({error: "Invalid credentials"});
+    console.warn("Recruit Login Failed", {
+      outcome: "invalid_credentials",
+      ipHash: request.telemetry?.ipHash,
+      uaSummary: request.telemetry?.uaSummary,
+    });
   } catch (error) {
+    console.error("Recruit Login Error", {
+      outcome: "error",
+      ipHash: request.telemetry?.ipHash,
+      uaSummary: request.telemetry?.uaSummary,
+      message: error instanceof Error ? error.message : String(error),
+    });
     handleControllerError(response, error);
   }
 }
@@ -385,7 +420,7 @@ export async function recruitResetHandler(
         updatedAt: Timestamp.now(),
       });
 
-      await sendTempPasswordEmail(
+      await queueTempPasswordEmail(
         data.googleEmail || data.kaistEmail,
         tempPassword
       );

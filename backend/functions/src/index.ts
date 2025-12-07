@@ -164,6 +164,7 @@ import express from "express";
 import {v2Router} from "./routes/v2";
 import {errorHandler} from "./middleware/errorHandler";
 import {corsMiddleware} from "./middleware/cors";
+import {telemetryMiddleware} from "./middleware/telemetry";
 
 process.on("unhandledRejection", (reason) => {
   console.error("CRITICAL: Unhandled Rejection:", reason);
@@ -175,7 +176,15 @@ process.on("uncaughtException", (error) => {
 
 const app = express();
 
+// Enable trust proxy when behind Cloud Run / Firebase Hosting / Emulator
+if (process.env.K_SERVICE || process.env.FIREBASE_CONFIG || process.env.FUNCTIONS_EMULATOR === "true") {
+  app.set("trust proxy", true);
+} else {
+  app.set("trust proxy", 1);
+}
+
 // Middleware
+app.use(telemetryMiddleware);
 app.use(requestLogger);
 app.use(corsMiddleware);
 app.use(express.json());

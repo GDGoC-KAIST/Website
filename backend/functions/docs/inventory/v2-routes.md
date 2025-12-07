@@ -1,44 +1,23 @@
-# V2 라우트 인벤토리
+# V2 라우트 인벤토리 (SSOT)
 
-| Method | Endpoint | Handler | OpenAPI (O/X) | Tests (O/X) | 비고 |
-| --- | --- | --- | --- | --- | --- |
-| GET | /v2/docs | serveSwaggerUi | O | O | 작성 완료 |
-| GET | /v2/openapi.json | serveOpenApiJson | O | O | 작성 완료 |
-| GET | /v2/healthz | healthRouter | X | X | 미구현 - PR-D4 예정 |
-| POST | /v2/auth/login/github | loginGithub | O | O | 작성 완료 |
-| POST | /v2/auth/refresh | refresh | O | O | 작성 완료 |
-| POST | /v2/auth/logout | logout | O | O | 로그 모니터링 필요 |
-| GET | /v2/users/me | getMe | O | O | 작성 완료 |
-| PATCH | /v2/users/me | patchMe | O | X | 테스트 누락 |
-| POST | /v2/users/link-member | linkMember | O | O | 작성 완료 |
-| POST | /v2/posts | createPost | O | O | 작성 완료 |
-| GET | /v2/posts | listPosts | O | O | 작성 완료 |
-| GET | /v2/posts/:postId | getPost | O | O | 작성 완료 |
-| PATCH | /v2/posts/:postId | updatePost | O | O | 작성 완료 |
-| DELETE | /v2/posts/:postId | deletePost | O | O | 작성 완료 |
-| POST | /v2/comments | createComment | O | O | 작성 완료 |
-| GET | /v2/comments | listComments | O | O | 작성 완료 |
-| DELETE | /v2/comments/:commentId | deleteComment | O | O | 작성 완료 |
-| POST | /v2/likes/toggle | toggleLike | O | O | 작성 완료 |
-| POST | /v2/images | uploadImage | O | X | 이미지 계약/테스트 보강 필요 |
-| GET | /v2/images | listImages | O | X | 일부 계약 테스트 누락 |
-| GET | /v2/images/:imageId | getImage | O | X | 일부 계약 테스트 누락 |
-| PATCH | /v2/images/:imageId | updateImage | O | X | 일부 계약 테스트 누락 |
-| DELETE | /v2/images/:imageId | deleteImage | O | X | 일부 계약 테스트 누락 |
-| POST | /v2/recruit/applications | apply | O | O | 작성 완료 |
-| POST | /v2/recruit/login | login | O | O | 작성 완료 |
-| GET | /v2/recruit/me | me | O | O | 작성 완료 |
-| PATCH | /v2/recruit/me | updateMe | O | O | 작성 완료 |
-| POST | /v2/recruit/reset-password | resetPassword | O | O | 작성 완료 |
-| GET | /v2/recruit/config | config | O | O | 작성 완료 |
-| POST | /v2/admin/members | createMember | O | O | 작성 완료 |
-| POST | /v2/admin/members/:memberId/reset-link-code | resetLinkCode | O | X | 테스트 누락 |
-| GET | /v2/admin/recruit/applications | listRecruitApplications | O | X | 별도 커버 필요 |
-| PATCH | /v2/admin/recruit/applications/:applicationId/status | updateRecruitApplicationStatus | O | X | 별도 커버 필요 |
-| GET | /v2/admin/recruit/config | getRecruitConfig | O | X | 별도 커버 필요 |
-| PATCH | /v2/admin/recruit/config | updateRecruitConfig | O | X | 별도 커버 필요 |
-| POST | /v2/admin/migrations/run | runMigration | O | X | 스펙/테스트 보강 필요 |
+`src/routes/v2/index.ts`를 기준으로 실제 마운트된 라우터를 나열합니다. 세부 엔드포인트와 테스트/스펙 상태는 각 도메인 문서와 OpenAPI에서 관리합니다.
 
-추가 이벤트:
-- 이미지 API는 업로드/삭제 중심으로 계약 테스트를 보강해야 함
-- Healthz/관리자 라우트 등 미커버 영역은 PR-D4 계획에 따라 단계적으로 보완함
+| Base Path | Router | 증빙 |
+| --- | --- | --- |
+| `/v2/docs`, `/v2/openapi.json` | `docsRouter` | `src/routes/v2/index.ts:20-23` |
+| `/v2/healthz` | `healthRouter` | `src/routes/v2/index.ts:20-24` |
+| `/v2/auth` | `authRouter` | `src/routes/v2/index.ts:31-33` |
+| `/v2/users` | `userRouter` | `src/routes/v2/index.ts:35-37` |
+| `/v2/admin/members` | `adminMemberRouter` | `src/routes/v2/index.ts:38-40` |
+| `/v2/posts` | `postRouter` (GET 캐시 포함) | `src/routes/v2/index.ts:41-49` |
+| `/v2/images` | `imageRouter` | `src/routes/v2/index.ts:51-53` |
+| `/v2/comments` | `commentRouter` | `src/routes/v2/index.ts:54-56` |
+| `/v2/likes` | `likeRouter` | `src/routes/v2/index.ts:57-59` |
+| `/v2/galleries` | `galleryRouter` | `src/routes/v2/index.ts:60-62` |
+| `/v2/recruit` | `recruitRouter` (공용 + 보호 구간) | `src/routes/v2/index.ts:63-65` |
+| `/v2/admin/recruit` | `adminRecruitRouter` | `src/routes/v2/index.ts:66-67` |
+| `/v2/admin/migrations` | `adminMigrationRouter` | `src/routes/v2/index.ts:69-70` |
+
+유지 원칙
+- 라우터 추가/삭제 시 이 표를 즉시 갱신하고, 증빙 라인 번호를 정확히 맞춥니다.
+- 상세 엔드포인트/테스트 현황은 OpenAPI와 도메인별 문서에서 관리하며, 필요 시 여기에 링크를 추가합니다.

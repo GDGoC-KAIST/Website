@@ -1,5 +1,7 @@
 import type {Request, Response, NextFunction} from "express";
+import type {Timestamp} from "firebase-admin/firestore";
 import {db} from "../config/firebase";
+import {AppError} from "../utils/appError";
 
 const SESSIONS_COLLECTION = "recruitSessions";
 
@@ -21,22 +23,37 @@ export async function recruitAuthMiddleware(
       : "";
 
     if (!token) {
-      res.status(401).json({error: "Missing authorization token"});
-      return;
+      throw AppError.unauthorized("Unauthorized");
     }
 
     // Validate token against recruitSessions collection
     const sessionSnap = await db.collection(SESSIONS_COLLECTION).doc(token).get();
 
     if (!sessionSnap.exists) {
-      res.status(401).json({error: "Invalid or expired session"});
-      return;
+      throw AppError.unauthorized("Unauthorized");
     }
 
-    const sessionData = sessionSnap.data() as {email?: string};
+    const sessionData = sessionSnap.data() as {
+      email?: string;
+      expiresAt?: Timestamp;
+    };
     if (!sessionData?.email) {
-      res.status(401).json({error: "Invalid session payload"});
-      return;
+      throw AppError.unauthorized("Unauthorized");
+    }
+
+    const expiresAt = sessionData.expiresAt;
+    if (expiresAt && typeof expiresAt.toMillis === "function") {
+      if (expiresAt.toMillis() < Date.now()) {
+        try {
+          await sessionSnap.ref.delete();
+        } catch (error) {
+          console.error("Failed to delete expired recruit session", {
+            token,
+            error,
+          });
+        }
+        throw AppError.unauthorized("Unauthorized");
+      }
     }
 
     // Attach session data to request
@@ -48,7 +65,10 @@ export async function recruitAuthMiddleware(
 
     next();
   } catch (error) {
+    if (error instanceof AppError && error.statusCode < 500) {
+      return next(error);
+    }
     console.error("Recruit auth middleware error:", error);
-    res.status(500).json({error: "Internal server error"});
+    next(error);
   }
 }

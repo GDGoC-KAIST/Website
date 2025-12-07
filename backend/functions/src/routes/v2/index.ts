@@ -13,11 +13,14 @@ import {docsRouter} from "./docsRoutes";
 import {rateLimit} from "../../middleware/rateLimiter";
 import {publicCache} from "../../middleware/cacheControl";
 import {recruitRouter} from "./recruitRoutes";
+import {healthRouter} from "./healthRoutes";
 
 const v2Router = Router();
 
 // Docs routes
 v2Router.use("/", docsRouter);
+// Health route
+v2Router.use("/healthz", healthRouter);
 
 const loginRateLimiter = rateLimit({
   max: 10,

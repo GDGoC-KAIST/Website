@@ -9,15 +9,18 @@
 		"start": "npm run shell",
 		"deploy": "firebase deploy --only functions",
 		"logs": "firebase functions:log",
-		"test:integration": "npm run build && node scripts/pick-ports.mjs && dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions \"dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit\"",
-		"test:gate": "node scripts/pick-ports.mjs && dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions \"dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand tests/contract tests/security tests/smoke --detectOpenHandles\"",
+		"test:integration": "if [ -z \"$CI\" ]; then npm run build; fi && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit\"",
+		"test:integration:ci": "CI=1 node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit\"",
+		"test:gate": "npm run audit:verify && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand tests/contract tests/security tests/smoke --detectOpenHandles\"",
+		"test:contract": "jest -c jest.contract.config.js --runInBand",
 		"test": "npm run test:integration && npm run test:gate",
-		"openapi:print": "ts-node --esm scripts/print-openapi.ts",
+		"openapi:print": "ts-node --project tsconfig.scripts.json --esm scripts/print-openapi.ts",
 		"openapi:check": "npm run openapi:print > current-spec.json && git diff --no-index --exit-code openapi.json current-spec.json && rm current-spec.json",
-		"ssot:gate": "ts-node --esm scripts/ssot-gate.ts"
+		"ssot:gate": "ts-node --project tsconfig.scripts.json --esm scripts/ssot-gate.ts",
+		"audit:verify": "node --loader ts-node/esm scripts/verify-audit-evidence.mts"
 	},
 	"engines": {
-		"node": "22"
+		"node": "20"
 	},
 	"main": "lib/index.js",
 	"dependencies": {
@@ -28,8 +31,8 @@
 		"busboy": "^1.6.0",
 		"dotenv": "^17.2.3",
 		"express": "^4.18.2",
-		"firebase-admin": "^12.6.0",
-		"firebase-functions": "^6.0.1",
+		"firebase-admin": "^13.6.0",
+		"firebase-functions": "^7.0.1",
 		"json2csv": "^6.0.0-alpha.2",
 		"jsonwebtoken": "^9.0.2",
 		"node-mailjet": "^6.0.11",

@@ -2,7 +2,29 @@ import type {Request, Response, NextFunction} from "express";
 import {ImageService, ListImageQuery, UpdateImageDto, UserContext} from "../../services/imageService";
 import {AppError} from "../../utils/appError";
 
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
 const imageService = new ImageService();
+
+function assertUploadWithinLimits(req: Request) {
+  const contentType = req.headers["content-type"] || req.headers["Content-Type"];
+  if (typeof contentType !== "string" || !contentType.includes("multipart/form-data")) {
+    throw AppError.badRequest("Content-Type must be multipart/form-data");
+  }
+
+  const contentLength = req.headers["content-length"] || req.headers["Content-Length"];
+  if (typeof contentLength === "string") {
+    const length = Number(contentLength);
+    if (!Number.isNaN(length) && length > MAX_UPLOAD_BYTES) {
+      // Drain the stream early to avoid ECONNRESET before we respond with 413.
+      if (!req.readableEnded) {
+        req.on("data", () => undefined);
+        req.resume();
+      }
+      throw AppError.payloadTooLarge("File too large (max 5MB)");
+    }
+  }
+}
 
 function optionalUser(req: Request): UserContext | undefined {
   if (!req.user) return undefined;
@@ -14,6 +36,7 @@ export async function uploadImage(req: Request, res: Response, next: NextFunctio
     if (!req.user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
+    assertUploadWithinLimits(req);
     const user = {sub: req.user.sub, roles: req.user.roles};
     const image = await imageService.uploadImage(user, req);
     res.status(201).json({image});

@@ -9,6 +9,17 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ): void {
+  const requestId = (req as Request & {id?: string}).id;
+
+  const payloadTooLarge = (message: string) =>
+    res.status(413).json({error: {code: ErrorCode.PAYLOAD_TOO_LARGE, message, ...(requestId ? {requestId} : {})}});
+
+  const maybeMulter = error as Error & {code?: string};
+  if (maybeMulter?.code === "LIMIT_FILE_SIZE") {
+    payloadTooLarge("File too large (max 5MB)");
+    return;
+  }
+
   if (error instanceof AppError) {
     const code = normalizeErrorCode(error.errorCode, error.statusCode);
     res.status(error.statusCode).json({
@@ -16,6 +27,7 @@ export function errorHandler(
         code,
         message: error.message,
         ...(error.details ? {details: error.details} : {}),
+        ...(requestId ? {requestId} : {}),
       },
     });
     return;
@@ -33,6 +45,7 @@ export function errorHandler(
     error: {
       code: ErrorCode.INTERNAL_ERROR,
       message: "An unexpected error occurred",
+      ...(requestId ? {requestId} : {}),
     },
   });
 }
@@ -48,6 +61,15 @@ function normalizeErrorCode(code: ErrorCode | string, statusCode: number): Error
   }
   if (value === ErrorCode.TOKEN_EXPIRED || value.includes("TOKEN_EXPIRED")) {
     return ErrorCode.TOKEN_EXPIRED;
+  }
+  if (value === ErrorCode.FILE_TOO_LARGE || value.includes("FILE_TOO_LARGE")) {
+    return ErrorCode.FILE_TOO_LARGE;
+  }
+  if (value === ErrorCode.INVALID_FILE_TYPE || value.includes("INVALID_FILE_TYPE")) {
+    return ErrorCode.INVALID_FILE_TYPE;
+  }
+  if (value === ErrorCode.PAYLOAD_TOO_LARGE || value.includes("PAYLOAD_TOO_LARGE")) {
+    return ErrorCode.PAYLOAD_TOO_LARGE;
   }
   if (
     value === ErrorCode.REFRESH_TOKEN_REUSED ||
@@ -82,6 +104,7 @@ function normalizeErrorCode(code: ErrorCode | string, statusCode: number): Error
   if (statusCode === 404) return ErrorCode.NOT_FOUND;
   if (statusCode === 409) return ErrorCode.CONFLICT;
   if (statusCode === 429) return ErrorCode.TOO_MANY_REQUESTS;
+  if (statusCode === 413) return ErrorCode.PAYLOAD_TOO_LARGE;
   if (statusCode >= 500) return ErrorCode.INTERNAL_ERROR;
   return ErrorCode.INVALID_INPUT;
 }

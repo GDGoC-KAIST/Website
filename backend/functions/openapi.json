@@ -1,6 +1,6 @@
 
 > openapi:print
-> ts-node --esm scripts/print-openapi.ts
+> ts-node --project tsconfig.scripts.json --esm scripts/print-openapi.ts
 
 {
   "components": {
@@ -132,7 +132,10 @@
           "ALREADY_EXISTS",
           "CONFLICT",
           "TOO_MANY_REQUESTS",
-          "INTERNAL_ERROR"
+          "INTERNAL_ERROR",
+          "FILE_TOO_LARGE",
+          "INVALID_FILE_TYPE",
+          "PAYLOAD_TOO_LARGE"
         ],
         "type": "string"
       },
@@ -254,6 +257,29 @@
         ],
         "type": "object"
       },
+      "HealthCheckResponse": {
+        "properties": {
+          "ok": {
+            "example": true,
+            "type": "boolean"
+          },
+          "service": {
+            "example": "functions",
+            "type": "string"
+          },
+          "ts": {
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "service",
+          "ts"
+        ],
+        "type": "object"
+      },
       "Image": {
         "properties": {
           "createdAt": {
@@ -305,6 +331,18 @@
           "uploaderUserId",
           "scope",
           "createdAt"
+        ],
+        "type": "object"
+      },
+      "LegacyErrorResponse": {
+        "properties": {
+          "error": {
+            "example": "Service Unavailable",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
         ],
         "type": "object"
       },
@@ -792,6 +830,33 @@
         ],
         "type": "object"
       },
+      "UserUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "department": {
+            "example": "Computer Science",
+            "type": "string"
+          },
+          "name": {
+            "example": "홍길동",
+            "type": "string"
+          },
+          "phone": {
+            "example": "010-1234-5678",
+            "type": "string"
+          },
+          "profileImage": {
+            "example": "https://example.com/profile.png",
+            "nullable": true,
+            "type": "string"
+          },
+          "studentId": {
+            "example": "20240001",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ValidationErrorResponse": {
         "allOf": [
           {
@@ -830,7 +895,7 @@
       },
       "recruitSession": {
         "bearerFormat": "RecruitSession",
-        "description": "Opaque session token returned by /v2/recruit/login",
+        "description": "Opaque session token returned by /v2/recruit/login. 세션은 14일 후 만료될 수 있음 (Legacy 세션은 유지됨).",
         "scheme": "bearer",
         "type": "http"
       }
@@ -839,7 +904,7 @@
   "info": {
     "contact": {
       "name": "GDGoC KAIST",
-      "url": "https://gdgoc.kaist.ac.kr"
+      "url": "https://gdgockaist.com"
     },
     "description": "RESTful API for GDGoC KAIST website - V2 endpoints with JWT authentication, TipTap content, and Firebase integration",
     "title": "GDGoC KAIST API",
@@ -847,6 +912,418 @@
   },
   "openapi": "3.0.0",
   "paths": {
+    "/admin/members/{memberId}/reset-link-code": {
+      "post": {
+        "description": "Generates a new member link code with optional custom expiry (days). Admin only.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memberId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expiresInDays": {
+                    "description": "Positive number of days before the link expires",
+                    "minimum": 1,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "expiresInDays"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "linkCode": {
+                      "description": "Newly issued link code",
+                      "example": "ABCD-1234",
+                      "type": "string"
+                    },
+                    "member": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "member",
+                    "linkCode"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Link code reset"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request payload"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - admin only"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Member not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Reset member link code",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheckResponse"
+                }
+              }
+            },
+            "description": "Health check succeeded"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Service unavailable"
+          }
+        },
+        "summary": "서버 상태 및 DB 연결 확인",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/images": {
+      "post": {
+        "description": "Uploads an image file to Firebase Storage and persists metadata in Firestore. Requires MEMBER or ADMIN role.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "description": {
+                    "description": "Optional description",
+                    "type": "string"
+                  },
+                  "file": {
+                    "description": "Image file to upload",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Optional display name",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "description": "Visibility scope; defaults to members",
+                    "enum": [
+                      "public",
+                      "members",
+                      "private"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "image": {
+                      "$ref": "#/components/schemas/Image"
+                    }
+                  },
+                  "required": [
+                    "image"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Image uploaded"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidType": {
+                    "summary": "Unsupported MIME type",
+                    "value": {
+                      "error": {
+                        "code": "INVALID_FILE_TYPE",
+                        "message": "Invalid file type"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload or unsupported file type"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Insufficient role"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "tooLarge": {
+                    "summary": "File exceeds 5MB",
+                    "value": {
+                      "error": {
+                        "code": "PAYLOAD_TOO_LARGE",
+                        "message": "File too large (max 5MB)"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payload too large (max 5MB)"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Upload an image (multipart)",
+        "tags": [
+          "Images"
+        ]
+      }
+    },
+    "/images/{imageId}": {
+      "delete": {
+        "description": "Deletes the image file from storage and removes metadata. Only uploader or admin may delete.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid id"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Delete an image",
+        "tags": [
+          "Images"
+        ]
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "image": {
+                      "$ref": "#/components/schemas/Image"
+                    }
+                  },
+                  "required": [
+                    "image"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Image found"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Authentication required for non-public scopes"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Image not found"
+          }
+        },
+        "summary": "Fetch image metadata",
+        "tags": [
+          "Images"
+        ]
+      }
+    },
     "/posts/{postId}": {
       "get": {
         "description": "Returns post content and increments viewCount on 200 OK responses. Returns 304 without incrementing the counter when the client's ETag matches.",
@@ -1200,6 +1677,79 @@
           }
         ],
         "summary": "Link authenticated user to a member record",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/users/me": {
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Profile updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid update payload"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                }
+              }
+            },
+            "description": "Restricted fields"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Update authenticated user profile",
         "tags": [
           "Users"
         ]

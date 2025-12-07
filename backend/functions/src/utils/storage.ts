@@ -4,7 +4,7 @@ import {randomUUID} from "crypto";
 import {bucket} from "../config/firebase";
 import {AppError} from "./appError";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export interface UploadedFile {
@@ -54,50 +54,58 @@ export async function uploadFile(req: Request, userId: string): Promise<UploadRe
       const {filename, mimeType} = info;
       if (!ALLOWED_MIME_TYPES.has(mimeType)) {
         fileStream.resume();
-        reject(new AppError(400, "INVALID_FILE", "Unsupported file type"));
+        reject(AppError.badRequest("Invalid file type", "INVALID_FILE_TYPE"));
         return;
       }
 
       const extension = resolveExtension(filename, mimeType);
       const storagePath = `images/${userId}/${randomUUID()}${extension}`;
-      const bucketFile = bucket.file(storagePath);
-      const writeStream = bucketFile.createWriteStream({
-        metadata: {contentType: mimeType},
-        resumable: false,
-      });
+      const chunks: Buffer[] = [];
       let size = 0;
+      let tooLarge = false;
 
       uploadPromise = new Promise((resolveUpload, rejectUpload) => {
         fileStream.on("data", (chunk: Buffer) => {
           size += chunk.length;
+          if (size > MAX_FILE_SIZE) {
+            tooLarge = true;
+            fileStream.resume();
+          } else {
+            chunks.push(chunk);
+          }
         });
 
-        fileStream.on("limit", () => {
-          fileStream.unpipe(writeStream);
-          writeStream.end();
-          rejectUpload(new AppError(400, "INVALID_FILE", "File exceeds 10MB limit"));
-        });
+        const rejectTooLarge = () => {
+          tooLarge = true;
+          fileStream.resume();
+          rejectUpload(AppError.payloadTooLarge("File too large (max 5MB)"));
+        };
 
-        writeStream.on("finish", () => {
-          uploadedFile = {
-            storagePath,
-            mimeType,
-            size,
-            originalName: filename || "upload",
-          };
-          resolveUpload();
+        fileStream.on("limit", rejectTooLarge);
+
+        fileStream.on("end", async () => {
+          if (tooLarge) return;
+          try {
+            const buffer = Buffer.concat(chunks);
+            const bucketFile = bucket.file(storagePath);
+            await bucketFile.save(buffer, {contentType: mimeType, resumable: false});
+            uploadedFile = {
+              storagePath,
+              mimeType,
+              size,
+              originalName: filename || "upload",
+            };
+            resolveUpload();
+          } catch (error) {
+            rejectUpload(error instanceof AppError ? error : new AppError(500, "UPLOAD_FAILED", "Failed to upload file"));
+          }
         });
 
         const onStreamError = (error: unknown) => {
-          rejectUpload(
-            error instanceof AppError ? error : new AppError(500, "UPLOAD_FAILED", "Failed to upload file")
-          );
+          rejectUpload(error instanceof AppError ? error : new AppError(500, "UPLOAD_FAILED", "Failed to upload file"));
         };
 
-        writeStream.on("error", onStreamError);
         fileStream.on("error", onStreamError);
-
-        fileStream.pipe(writeStream);
       });
     });
 
@@ -133,6 +141,13 @@ export async function uploadFile(req: Request, userId: string): Promise<UploadRe
 }
 
 export async function getSignedUrl(storagePath: string): Promise<string> {
+  // Emulator cannot issue real signed URLs; return direct emulator URL instead.
+  if (process.env.STORAGE_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
+    const host = process.env.STORAGE_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST || "localhost:9199";
+    const encodedPath = encodeURIComponent(storagePath);
+    return `http://${host}/storage/v0/b/${bucket.name}/o/${encodedPath}?alt=media`;
+  }
+
   const [url] = await bucket.file(storagePath).getSignedUrl({
     action: "read",
     expires: Date.now() + 3600 * 1000, // 1 hour

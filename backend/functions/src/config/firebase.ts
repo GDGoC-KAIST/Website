@@ -13,19 +13,19 @@ if (process.env.FUNCTIONS_EMULATOR) {
     const result = dotenv.config({path: envPath});
     
     if (result.error) {
-      console.warn("⚠️ .env file not found or error loading:", result.error.message);
+      console.warn("   .env file not found or error loading:", result.error.message);
       console.warn(`   Expected location: ${envPath} (backend/.env)`);
       console.warn("   Create .env file in backend/.env");
       console.warn("   See README.md for .env file format");
     } else {
-      console.log("✅ .env file loaded successfully");
+      console.log("   .env file loaded successfully");
       console.log(`   Location: ${envPath}`);
       console.log("   EMAIL_USER:", process.env.EMAIL_USER ? "***set***" : "not set");
       console.log("   EMAIL_PASSWORD:", process.env.EMAIL_PASSWORD ? "***set***" : "not set");
       console.log("   ADMIN_EMAIL:", process.env.ADMIN_EMAIL || "not set");
     }
   } catch (error) {
-    console.warn("⚠️ Failed to load dotenv:", error);
+    console.warn("   Failed to load dotenv:", error);
     // dotenv가 없어도 계속 진행 (환경 변수를 직접 export한 경우)
   }
 }

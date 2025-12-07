@@ -1,9 +1,7 @@
 import path from "path";
-import {fileURLToPath} from "url";
 import type {Options} from "swagger-jsdoc";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const docsDir = typeof __dirname !== "undefined" ? __dirname : path.resolve(process.cwd(), "src/docs");
 
 export const openApiOptions: Options = {
   definition: {
@@ -14,7 +12,7 @@ export const openApiOptions: Options = {
       description: "RESTful API for GDGoC KAIST website - V2 endpoints with JWT authentication, TipTap content, and Firebase integration",
       contact: {
         name: "GDGoC KAIST",
-        url: "https://gdgoc.kaist.ac.kr",
+        url: "https://gdgockaist.com",
       },
     },
     servers: [
@@ -39,7 +37,7 @@ export const openApiOptions: Options = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "RecruitSession",
-          description: "Opaque session token returned by /v2/recruit/login",
+          description: "Opaque session token returned by /v2/recruit/login. 세션은 14일 후 만료될 수 있음 (Legacy 세션은 유지됨).",
         },
       },
       schemas: {
@@ -80,6 +78,9 @@ export const openApiOptions: Options = {
             "CONFLICT",
             "TOO_MANY_REQUESTS",
             "INTERNAL_ERROR",
+            "FILE_TOO_LARGE",
+            "INVALID_FILE_TYPE",
+            "PAYLOAD_TOO_LARGE",
           ],
         },
         ErrorDetail: {
@@ -179,6 +180,33 @@ export const openApiOptions: Options = {
               description: "Cursor for next page, null if no more pages",
             },
           },
+        },
+        HealthCheckResponse: {
+          type: "object",
+          required: ["ok", "service", "ts"],
+          properties: {
+            ok: {type: "boolean", example: true},
+            service: {type: "string", example: "functions"},
+            ts: {type: "string", format: "date-time", example: "2024-01-01T00:00:00.000Z"},
+          },
+        },
+        LegacyErrorResponse: {
+          type: "object",
+          required: ["error"],
+          properties: {
+            error: {type: "string", example: "Service Unavailable"},
+          },
+        },
+        UserUpdateRequest: {
+          type: "object",
+          properties: {
+            name: {type: "string", example: "홍길동"},
+            phone: {type: "string", example: "010-1234-5678"},
+            department: {type: "string", example: "Computer Science"},
+            studentId: {type: "string", example: "20240001"},
+            profileImage: {type: "string", nullable: true, example: "https://example.com/profile.png"},
+          },
+          additionalProperties: false,
         },
         // ===== User Schemas =====
         User: {
@@ -457,6 +485,61 @@ export const openApiOptions: Options = {
       },
     ],
     paths: {
+      "/users/me": {
+        patch: {
+          summary: "Update authenticated user profile",
+          tags: ["Users"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {$ref: "#/components/schemas/UserUpdateRequest"},
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Profile updated",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      user: {$ref: "#/components/schemas/User"},
+                    },
+                    required: ["user"],
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid update payload",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/LegacyErrorResponse"},
+                },
+              },
+            },
+            "401": {
+              description: "Authentication required",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/Error"},
+                },
+              },
+            },
+            "403": {
+              description: "Restricted fields",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/LegacyErrorResponse"},
+                },
+              },
+            },
+          },
+          security: [{bearerAuth: []}],
+        },
+      },
       "/users/link-member": {
         post: {
           tags: ["Users"],
@@ -590,6 +673,172 @@ export const openApiOptions: Options = {
           },
         },
       },
+      "/images": {
+        post: {
+          tags: ["Images"],
+          summary: "Upload an image (multipart)",
+          description: "Uploads an image file to Firebase Storage and persists metadata in Firestore. Requires MEMBER or ADMIN role.",
+          security: [{bearerAuth: []}],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    file: {
+                      type: "string",
+                      format: "binary",
+                      description: "Image file to upload",
+                    },
+                    name: {type: "string", description: "Optional display name"},
+                    description: {type: "string", description: "Optional description"},
+                    scope: {
+                      type: "string",
+                      enum: ["public", "members", "private"],
+                      description: "Visibility scope; defaults to members",
+                    },
+                  },
+                  required: ["file"],
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Image uploaded",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["image"],
+                    properties: {
+                      image: {$ref: "#/components/schemas/Image"},
+                    },
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid payload or unsupported file type",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/ErrorResponse"},
+                  examples: {
+                    invalidType: {
+                      summary: "Unsupported MIME type",
+                      value: {error: {code: "INVALID_FILE_TYPE", message: "Invalid file type"}},
+                    },
+                  },
+                },
+              },
+            },
+            "413": {
+              description: "Payload too large (max 5MB)",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/ErrorResponse"},
+                  examples: {
+                    tooLarge: {
+                      summary: "File exceeds 5MB",
+                      value: {error: {code: "PAYLOAD_TOO_LARGE", message: "File too large (max 5MB)"}},
+                    },
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Authentication required",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/ErrorResponse"}}},
+            },
+            "403": {
+              description: "Insufficient role",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/ErrorResponse"}}},
+            },
+          },
+        },
+      },
+      "/images/{imageId}": {
+        get: {
+          tags: ["Images"],
+          summary: "Fetch image metadata",
+          parameters: [
+            {
+              name: "imageId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Image found",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["image"],
+                    properties: {
+                      image: {$ref: "#/components/schemas/Image"},
+                    },
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Authentication required for non-public scopes",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "404": {
+              description: "Image not found",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/ErrorResponse"}}},
+            },
+          },
+        },
+        delete: {
+          tags: ["Images"],
+          summary: "Delete an image",
+          description: "Deletes the image file from storage and removes metadata. Only uploader or admin may delete.",
+          security: [{bearerAuth: []}],
+          parameters: [
+            {
+              name: "imageId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Deleted",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {ok: {type: "boolean", example: true}},
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid id",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "401": {
+              description: "Authentication required",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "403": {
+              description: "Forbidden",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "404": {
+              description: "Not found",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+          },
+        },
+      },
       "/recruit/applications": {
         post: {
           tags: ["Recruit"],
@@ -643,6 +892,78 @@ export const openApiOptions: Options = {
             },
             "401": {description: "Invalid credentials"},
             "423": {description: "Account locked"},
+          },
+        },
+      },
+      "/admin/members/{memberId}/reset-link-code": {
+        post: {
+          tags: ["Admin"],
+          summary: "Reset member link code",
+          description: "Generates a new member link code with optional custom expiry (days). Admin only.",
+          security: [{bearerAuth: []}],
+          parameters: [
+            {
+              name: "memberId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    expiresInDays: {
+                      type: "number",
+                      minimum: 1,
+                      description: "Positive number of days before the link expires",
+                    },
+                  },
+                  required: ["expiresInDays"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Link code reset",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["member", "linkCode"],
+                    properties: {
+                      member: {$ref: "#/components/schemas/User"},
+                      linkCode: {
+                        type: "string",
+                        description: "Newly issued link code",
+                        example: "ABCD-1234",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid request payload",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "401": {
+              description: "Authentication required",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "403": {
+              description: "Forbidden - admin only",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
+            "404": {
+              description: "Member not found",
+              content: {"application/json": {schema: {$ref: "#/components/schemas/LegacyErrorResponse"}}},
+            },
           },
         },
       },
@@ -737,10 +1058,34 @@ export const openApiOptions: Options = {
           },
         },
       },
+      "/healthz": {
+        get: {
+          tags: ["System"],
+          summary: "서버 상태 및 DB 연결 확인",
+          responses: {
+            "200": {
+              description: "Health check succeeded",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/HealthCheckResponse"},
+                },
+              },
+            },
+            "503": {
+              description: "Service unavailable",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/LegacyErrorResponse"},
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
   apis: [
-    path.join(__dirname, "../routes/v2/**/*.ts"),
-    path.join(__dirname, "../controllers/v2/**/*.ts"),
+    path.join(docsDir, "../routes/v2/**/*.ts"),
+    path.join(docsDir, "../controllers/v2/**/*.ts"),
   ],
 };

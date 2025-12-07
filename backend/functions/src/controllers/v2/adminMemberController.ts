@@ -41,10 +41,16 @@ export async function resetLinkCode(
   try {
     const memberId = req.params.memberId;
     if (!memberId) {
-      throw new AppError(400, "INVALID_ARGUMENT", "memberId is required");
+      res.status(400).json({error: "memberId is required"});
+      return;
     }
 
     const {expiresInDays} = req.body ?? {};
+    if (expiresInDays === undefined || typeof expiresInDays !== "number" || expiresInDays <= 0) {
+      res.status(400).json({error: "expiresInDays must be a positive number"});
+      return;
+    }
+
     const result = await adminService.resetLinkCode(memberId, expiresInDays);
     res.status(200).json(result);
   } catch (error) {

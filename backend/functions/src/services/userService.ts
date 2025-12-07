@@ -20,6 +20,13 @@ export class UserService {
 
   async updateProfile(userId: string, body: Record<string, unknown>): Promise<UserProfile> {
     const updateData: Record<string, unknown> = {};
+    const basicFields = ["name", "phone", "department", "studentId"] as const;
+
+    basicFields.forEach((field) => {
+      if (typeof body[field] === "string") {
+        updateData[field] = (body[field] as string).trim();
+      }
+    });
 
     if (typeof body.bio === "string") {
       const trimmed = body.bio.trim();
