@@ -1,19 +1,9 @@
-import AWS from "aws-sdk";
 import {env} from "../config/env";
+import {MailjetProvider} from "./mailjetProvider";
+import {AppError} from "./appError";
+import {ErrorCode} from "./errorCodes";
 
-const region = process.env.SES_REGION || "ap-northeast-2";
-const isTestEnv = process.env.NODE_ENV === "test";
-
-const ses = !isTestEnv
-  ? new AWS.SES({
-    apiVersion: "2010-12-01",
-    region,
-    credentials: new AWS.Credentials({
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-    }),
-  })
-  : null;
+const provider = new MailjetProvider();
 
 export interface SendEmailPayload {
   to: string;
@@ -28,7 +18,7 @@ export async function sendEmail({
   html,
   text,
 }: SendEmailPayload): Promise<void> {
-  if (isTestEnv || env.disableEmailSending || !ses) {
+  if (env.disableEmailSending) {
     console.info(`[mock:sendEmail] ${subject} -> ${to}`, {
       killSwitch: env.disableEmailSending,
     });
@@ -36,37 +26,19 @@ export async function sendEmail({
   }
 
   try {
-    await ses
-      .sendEmail({
-        Source: "noreply@gdgockaist.com",
-        Destination: {
-          ToAddresses: [to],
-        },
-        Message: {
-          Subject: {
-            Charset: "UTF-8",
-            Data: subject,
-          },
-          Body: {
-            Html: {
-              Charset: "UTF-8",
-              Data: html,
-            },
-            ...(text
-              ? {
-                Text: {
-                  Charset: "UTF-8",
-                  Data: text,
-                },
-              }
-              : {}),
-          },
-        },
-      })
-      .promise();
+    await provider.send({
+      to,
+      subject,
+      html,
+      text,
+      from: env.emailFrom,
+    });
   } catch (error) {
-    console.error("Failed to send email via SES", error);
-    throw error;
+    if (error instanceof AppError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new AppError(500, ErrorCode.INTERNAL_ERROR, `Email sending failed: ${message}`);
   }
 }
 

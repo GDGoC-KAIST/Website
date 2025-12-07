@@ -1,5 +1,5 @@
 import {Request, Response, NextFunction} from "express";
-import {PostService} from "../../services/postService";
+import {PostService, CreatePostDto, UpdatePostDto} from "../../services/postService";
 import {AppError} from "../../utils/appError";
 import {validateContent} from "../../validators/contentValidator";
 import {sanitizeContent} from "../../services/contentSanitizer";
@@ -7,8 +7,10 @@ import type {TipTapDoc} from "../../types/tiptap";
 import type {Post} from "../../types/post";
 import {Timestamp} from "firebase-admin/firestore";
 import {createHash} from "crypto";
+import {PostRepo} from "../../repositories/postRepo";
 
 const postService = new PostService();
+const postRepo = new PostRepo();
 
 function optionalUser(req: Request) {
   return req.user
@@ -22,12 +24,11 @@ export async function createPost(req: Request, res: Response, next: NextFunction
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
     const user = {sub: req.user.sub, roles: req.user.roles, memberId: req.user.memberId};
-    const normalizedContent = normalizeContentInput(req.body?.content);
-    if (!normalizedContent) {
-      throw new AppError(400, "INVALID_CONTENT", "TipTap JSON content is required");
-    }
+    const body = req.body as CreatePostDto;
+    const normalizedContent =
+      typeof body.content === "string" ? stringToDoc(body.content) : body.content;
     const content = sanitizeContent(validateContent(normalizedContent));
-    const post = await postService.createPost(user, {...req.body, content});
+    const post = await postService.createPost(user, {...body, content});
     res.status(201).json({post: serializePost(post)});
   } catch (error) {
     next(error);
@@ -53,7 +54,11 @@ export async function getPost(req: Request, res: Response, next: NextFunction) {
       return;
     }
 
-    const serializedPost = serializePost(post);
+    const viewCount = await postRepo.incrementViewCount(post.id);
+    const serializedPost = serializePost({
+      ...post,
+      viewCount,
+    });
     res.setHeader("ETag", etag);
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
     res.status(200).json({post: serializedPost});
@@ -85,16 +90,15 @@ export async function updatePost(req: Request, res: Response, next: NextFunction
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
     const user = {sub: req.user.sub, roles: req.user.roles, memberId: req.user.memberId};
+    const body = req.body as UpdatePostDto;
     let content: TipTapDoc | undefined;
-    if (req.body?.content !== undefined) {
-      const normalizedContent = normalizeContentInput(req.body.content);
-      if (!normalizedContent) {
-        throw new AppError(400, "INVALID_CONTENT", "TipTap JSON content is required");
-      }
+    if (body.content) {
+      const normalizedContent =
+        typeof body.content === "string" ? stringToDoc(body.content) : body.content;
       content = sanitizeContent(validateContent(normalizedContent));
     }
     await postService.updatePost(user, req.params.postId, {
-      ...req.body,
+      ...body,
       ...(content ? {content} : {}),
     });
     res.status(200).json({ok: true});
@@ -135,17 +139,6 @@ function toIsoString(value: Timestamp | Date | string): string {
     return value.toISOString();
   }
   return value.toDate().toISOString();
-}
-
-function normalizeContentInput(input: unknown): TipTapDoc | null {
-  if (!input) return null;
-  if (typeof input === "string") {
-    return stringToDoc(input);
-  }
-  if (typeof input === "object") {
-    return input as TipTapDoc;
-  }
-  return null;
 }
 
 function stringToDoc(text: string): TipTapDoc {

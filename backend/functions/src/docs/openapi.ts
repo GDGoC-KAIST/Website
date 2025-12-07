@@ -1,459 +1,746 @@
 import path from "path";
+import {fileURLToPath} from "url";
 import type {Options} from "swagger-jsdoc";
 
-const tiptapExample = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [
-        {
-          type: "text",
-          text: "Hello TipTap!",
-        },
-      ],
-    },
-  ],
-};
-
-const schemas = {
-  User: {
-    type: "object",
-    properties: {
-      id: {type: "string"},
-      email: {type: "string", format: "email"},
-      name: {type: "string"},
-      roles: {
-        type: "array",
-        items: {type: "string", enum: ["USER", "MEMBER", "ADMIN"]},
-      },
-      memberId: {type: "string", nullable: true},
-      createdAt: {type: "string"},
-    },
-  },
-  Comment: {
-    type: "object",
-    properties: {
-      id: {type: "string"},
-      targetType: {type: "string", enum: ["post", "project", "seminar"]},
-      targetId: {type: "string"},
-      writerUserId: {type: "string"},
-      content: {type: "string"},
-      createdAt: {type: "string"},
-    },
-  },
-  LikeToggleResult: {
-    type: "object",
-    properties: {
-      liked: {type: "boolean"},
-      likeCount: {type: "integer"},
-    },
-    required: ["liked", "likeCount"],
-  },
-  Post: {
-    type: "object",
-    properties: {
-      id: {type: "string"},
-      type: {type: "string", enum: ["blog", "notice"]},
-      title: {type: "string"},
-      content: {$ref: "#/components/schemas/TipTapDoc"},
-      visibility: {type: "string", enum: ["public", "members_only", "private"]},
-      authorUserId: {type: "string"},
-      commentCount: {type: "integer"},
-      likeCount: {type: "integer"},
-      createdAt: {type: "string"},
-    },
-    example: {
-      id: "post_123",
-      type: "blog",
-      title: "Sample",
-      content: tiptapExample,
-    },
-  },
-  TipTapDoc: {
-    type: "object",
-    additionalProperties: true,
-  },
-  Error: {
-    type: "object",
-    properties: {
-      error: {
-        type: "object",
-        properties: {
-          code: {type: "string"},
-          message: {type: "string"},
-        },
-        required: ["code", "message"],
-      },
-    },
-    required: ["error"],
-  },
-  CursorPagination: {
-    type: "object",
-    properties: {
-      nextCursor: {type: "string", nullable: true},
-      items: {
-        type: "array",
-        items: {type: "object"},
-      },
-    },
-  },
-};
-
-const paths = {
-  "/v2/auth/login/github": {
-    post: {
-      summary: "Login with GitHub",
-      tags: ["Auth"],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {githubAccessToken: {type: "string"}},
-              required: ["githubAccessToken"],
-            },
-          },
-        },
-      },
-      responses: {
-        200: {
-          description: "Login success",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  user: {$ref: "#/components/schemas/User"},
-                  accessToken: {type: "string"},
-                  refreshToken: {type: "string"},
-                },
-              },
-            },
-          },
-        },
-        400: {description: "Invalid input", content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}}},
-      },
-    },
-  },
-  "/v2/auth/refresh": {
-    post: {
-      summary: "Rotate refresh token",
-      description: "Refresh tokens are bound to sessions. Reusing an older token triggers REFRESH_REUSE_DETECTED and revokes all sessions.",
-      tags: ["Auth"],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {refreshToken: {type: "string"}},
-              required: ["refreshToken"],
-            },
-          },
-        },
-      },
-      responses: {
-        200: {
-          description: "Rotation success",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  accessToken: {type: "string"},
-                  refreshToken: {type: "string"},
-                },
-              },
-            },
-          },
-        },
-        401: {
-          description: "Invalid or reused token (REFRESH_REUSE_DETECTED)",
-          content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}},
-        },
-      },
-    },
-  },
-  "/v2/auth/logout": {
-    post: {
-      summary: "Logout",
-      tags: ["Auth"],
-      security: [{bearerAuth: []}],
-      parameters: [
-        {
-          in: "query",
-          name: "all",
-          schema: {type: "boolean"},
-          description: "Set to true to revoke all active sessions for the current user.",
-        },
-        {
-          in: "query",
-          name: "sessionId",
-          schema: {type: "string"},
-          description: "Optional session identifier to revoke. Defaults to the current session.",
-        },
-      ],
-      responses: {
-        200: {description: "Logged out"},
-        401: {description: "Unauthorized", content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}}},
-      },
-    },
-  },
-  "/v2/users/me": {
-    get: {
-      summary: "Get current user profile",
-      tags: ["Users"],
-      security: [{bearerAuth: []}],
-      responses: {
-        200: {
-          description: "Profile",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {user: {$ref: "#/components/schemas/User"}},
-                required: ["user"],
-              },
-            },
-          },
-        },
-        401: {description: "Unauthorized", content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}}},
-      },
-    },
-  },
-  "/v2/users/link-member": {
-    post: {
-      summary: "Link member using link code",
-      tags: ["Users"],
-      security: [{bearerAuth: []}],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {linkCode: {type: "string"}},
-              required: ["linkCode"],
-            },
-          },
-        },
-      },
-      responses: {
-        200: {description: "Linked"},
-        400: {description: "Invalid code", content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}}},
-        401: {description: "Unauthorized"},
-      },
-    },
-  },
-  "/v2/posts": {
-    post: {
-      summary: "Create post",
-      tags: ["Posts"],
-      security: [{bearerAuth: []}],
-      responses: {
-        201: {
-          description: "Created",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {post: {$ref: "#/components/schemas/Post"}},
-                required: ["post"],
-              },
-            },
-          },
-        },
-        401: {description: "Unauthorized"},
-      },
-    },
-    get: {
-      summary: "List posts",
-      tags: ["Posts"],
-      responses: {
-        200: {
-          description: "Posts",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                allOf: [
-                  {$ref: "#/components/schemas/CursorPagination"},
-                  {
-                    properties: {
-                      posts: {
-                        type: "array",
-                        items: {$ref: "#/components/schemas/Post"},
-                      },
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  "/v2/posts/{postId}": {
-    get: {
-      summary: "Get post",
-      tags: ["Posts"],
-      parameters: [{name: "postId", in: "path", required: true, schema: {type: "string"}}],
-      responses: {200: {description: "Post", content: {"application/json": {schema: {type: "object", properties: {post: {$ref: "#/components/schemas/Post"}}}}}}},
-    },
-    patch: {
-      summary: "Update post",
-      tags: ["Posts"],
-      security: [{bearerAuth: []}],
-      parameters: [{name: "postId", in: "path", required: true, schema: {type: "string"}}],
-      responses: {
-        200: {description: "Updated"},
-        403: {description: "Forbidden", content: {"application/json": {schema: {$ref: "#/components/schemas/Error"}}}},
-      },
-    },
-    delete: {
-      summary: "Delete post",
-      tags: ["Posts"],
-      security: [{bearerAuth: []}],
-      parameters: [{name: "postId", in: "path", required: true, schema: {type: "string"}}],
-      responses: {
-        200: {description: "Deleted"},
-        403: {description: "Forbidden"},
-      },
-    },
-  },
-  "/v2/comments": {
-    post: {
-      summary: "Create comment",
-      tags: ["Comments"],
-      security: [{bearerAuth: []}],
-      responses: {
-        201: {
-          description: "Created",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  comment: {$ref: "#/components/schemas/Comment"},
-                },
-                required: ["comment"],
-              },
-            },
-          },
-        },
-        401: {description: "Unauthorized"},
-      },
-    },
-    get: {
-      summary: "List comments for target",
-      tags: ["Comments"],
-      parameters: [
-        {name: "targetType", in: "query", schema: {type: "string"}, required: true},
-        {name: "targetId", in: "query", schema: {type: "string"}, required: true},
-      ],
-      responses: {200: {description: "Comments"}},
-    },
-  },
-  "/v2/likes/toggle": {
-    post: {
-      summary: "Toggle like",
-      tags: ["Likes"],
-      security: [{bearerAuth: []}],
-      responses: {
-        200: {
-          description: "Toggle result",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  likeToggle: {$ref: "#/components/schemas/LikeToggleResult"},
-                },
-                required: ["likeToggle"],
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  "/v2/galleries": {
-    get: {
-      summary: "List galleries",
-      tags: ["Galleries"],
-      responses: {200: {description: "Galleries list"}},
-    },
-    post: {
-      summary: "Create gallery",
-      tags: ["Galleries"],
-      security: [{bearerAuth: []}],
-      responses: {201: {description: "Created"}, 403: {description: "Forbidden"}},
-    },
-  },
-  "/v2/admin/members": {
-    post: {
-      summary: "Create member",
-      tags: ["Admin"],
-      security: [{bearerAuth: []}],
-      responses: {
-        201: {description: "Created"},
-        403: {description: "Forbidden"},
-      },
-    },
-  },
-  "/v2/admin/recruit/applications/{id}/status": {
-    patch: {
-      summary: "Update application status",
-      tags: ["Admin"],
-      security: [{bearerAuth: []}],
-      parameters: [{name: "id", in: "path", required: true, schema: {type: "string"}}],
-      responses: {200: {description: "Updated"}, 403: {description: "Forbidden"}},
-    },
-  },
-  "/v2/admin/migrations/run": {
-    post: {
-      summary: "Run admin migration",
-      tags: ["Admin"],
-      security: [{bearerAuth: []}],
-      parameters: [
-        {name: "name", in: "query", required: true, schema: {type: "string"}},
-        {name: "dryRun", in: "query", schema: {type: "boolean"}},
-      ],
-      responses: {
-        200: {description: "Report"},
-        403: {description: "Forbidden"},
-      },
-    },
-  },
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const openApiOptions: Options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "GDGoC KAIST API v2",
+      title: "GDGoC KAIST API",
       version: "2.0.0",
-      description: "REST API for GDGoC KAIST services.",
+      description: "RESTful API for GDGoC KAIST website - V2 endpoints with JWT authentication, TipTap content, and Firebase integration",
+      contact: {
+        name: "GDGoC KAIST",
+        url: "https://gdgoc.kaist.ac.kr",
+      },
     },
-    servers: [{url: "/"}],
+    servers: [
+      {
+        url: "http://127.0.0.1:5001/demo-test/us-central1/apiV2",
+        description: "Local Development (Firebase Emulator)",
+      },
+      {
+        url: "https://your-project.cloudfunctions.net/apiV2",
+        description: "Production (Replace with actual Firebase Functions URL)",
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
+          description: "JWT access token obtained from /v2/auth/login/github",
+        },
+        recruitSession: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "RecruitSession",
+          description: "Opaque session token returned by /v2/recruit/login",
         },
       },
-      schemas,
+      schemas: {
+        // ===== CRITICAL: TipTap Schema =====
+        // MUST be defined here to resolve $ref pointers in Post.content
+        TipTapDoc: {
+          type: "object",
+          additionalProperties: true,
+          description: "TipTap editor JSON structure - flexible schema for rich text content",
+          example: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Hello World",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        // ===== Common Schemas =====
+        ErrorCode: {
+          type: "string",
+          enum: [
+            "VALIDATION_ERROR",
+            "INVALID_INPUT",
+            "UNAUTHORIZED",
+            "TOKEN_EXPIRED",
+            "REFRESH_TOKEN_REUSED",
+            "FORBIDDEN",
+            "INSUFFICIENT_ROLE",
+            "NOT_FOUND",
+            "ALREADY_EXISTS",
+            "CONFLICT",
+            "TOO_MANY_REQUESTS",
+            "INTERNAL_ERROR",
+          ],
+        },
+        ErrorDetail: {
+          type: "object",
+          required: ["source", "issues"],
+          properties: {
+            source: {
+              type: "string",
+              description: "Which part of the request failed validation",
+              enum: ["body", "query", "params", "system"],
+            },
+            issues: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["path", "message"],
+                properties: {
+                  path: {type: "string", example: "body.linkCode"},
+                  message: {type: "string", example: "linkCode is required"},
+                },
+              },
+            },
+          },
+        },
+        ErrorResponse: {
+          type: "object",
+          required: ["error"],
+          properties: {
+            error: {
+              type: "object",
+              required: ["code", "message"],
+              properties: {
+                code: {$ref: "#/components/schemas/ErrorCode"},
+                message: {type: "string", example: "Authentication required"},
+                details: {
+                  type: "array",
+                  nullable: true,
+                  description: "Optional contextual information or validation details",
+                  items: {$ref: "#/components/schemas/ErrorDetail"},
+                },
+              },
+            },
+          },
+        },
+        ValidationErrorResponse: {
+          allOf: [
+            {$ref: "#/components/schemas/ErrorResponse"},
+            {
+              type: "object",
+              properties: {
+                error: {
+                  type: "object",
+                  properties: {
+                    code: {enum: ["VALIDATION_ERROR"], default: "VALIDATION_ERROR"},
+                    details: {
+                      items: {$ref: "#/components/schemas/ErrorDetail"},
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        Error: {
+          allOf: [
+            {$ref: "#/components/schemas/ErrorResponse"},
+          ],
+        },
+        Pagination: {
+          type: "object",
+          properties: {
+            limit: {
+              type: "integer",
+              minimum: 1,
+              maximum: 50,
+              default: 20,
+              description: "Number of items per page",
+            },
+            page: {
+              type: "integer",
+              minimum: 1,
+              description: "Current page number (1-indexed)",
+            },
+            cursor: {
+              type: "string",
+              nullable: true,
+              description: "Cursor for pagination (opaque string)",
+            },
+          },
+        },
+        CursorPagination: {
+          type: "object",
+          properties: {
+            nextCursor: {
+              type: "string",
+              nullable: true,
+              description: "Cursor for next page, null if no more pages",
+            },
+          },
+        },
+        // ===== User Schemas =====
+        User: {
+          type: "object",
+          required: ["id", "githubId", "githubUsername", "roles", "createdAt"],
+          properties: {
+            id: {type: "string", example: "1001"},
+            githubId: {type: "string", example: "1001"},
+            githubUsername: {type: "string", example: "testuser"},
+            email: {type: "string", format: "email", example: "user@example.com"},
+            name: {type: "string", example: "Test User"},
+            githubProfileImageUrl: {
+              type: "string",
+              format: "uri",
+              example: "https://avatars.githubusercontent.com/u/1001",
+            },
+            profileImageUrl: {type: "string", format: "uri"},
+            memberId: {type: "string", nullable: true, example: "member123"},
+            roles: {
+              type: "array",
+              items: {type: "string", enum: ["USER", "MEMBER", "ADMIN"]},
+              example: ["USER", "MEMBER"],
+            },
+            bio: {type: "string", example: "Software engineer"},
+            stacks: {
+              type: "array",
+              items: {type: "string"},
+              example: ["React", "TypeScript"],
+            },
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+            lastLoginAt: {type: "string", format: "date-time", nullable: true},
+          },
+        },
+        // ===== Post Schemas =====
+        Post: {
+          type: "object",
+          required: ["id", "type", "title", "content", "authorUserId", "visibility", "createdAt", "updatedAt"],
+          properties: {
+            id: {type: "string", example: "post123"},
+            type: {type: "string", enum: ["blog", "notice"], example: "blog"},
+            title: {type: "string", example: "My First Post"},
+            content: {
+              $ref: "#/components/schemas/TipTapDoc",
+            },
+            excerpt: {type: "string", example: "A brief summary..."},
+            plainText: {type: "string", example: "Plain text version"},
+            readingTime: {type: "integer", example: 5, description: "Estimated reading time in minutes"},
+            thumbnailUrl: {type: "string", format: "uri"},
+            tags: {
+              type: "array",
+              items: {type: "string"},
+              example: ["tutorial", "typescript"],
+            },
+            visibility: {
+              type: "string",
+              enum: ["public", "members_only", "private"],
+              example: "public",
+            },
+            authorUserId: {type: "string", example: "user123"},
+            authorMemberId: {type: "string", example: "member123"},
+            viewCount: {type: "integer", example: 42},
+            likeCount: {type: "integer", example: 5},
+            commentCount: {type: "integer", example: 3},
+            isDeleted: {type: "boolean", example: false},
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+          },
+        },
+        // ===== Comment Schemas =====
+        Comment: {
+          type: "object",
+          required: ["id", "targetType", "targetId", "writerUserId", "content", "createdAt"],
+          properties: {
+            id: {type: "string", example: "comment123"},
+            targetType: {type: "string", enum: ["post", "project", "seminar"], example: "post"},
+            targetId: {type: "string", example: "post123"},
+            writerUserId: {type: "string", example: "user123"},
+            content: {type: "string", example: "Great post!"},
+            parentId: {type: "string", nullable: true, example: null},
+            isDeleted: {type: "boolean", example: false},
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+          },
+        },
+        // ===== Like Schemas =====
+        LikeToggleResult: {
+          type: "object",
+          required: ["liked", "likeCount"],
+          properties: {
+            liked: {
+              type: "boolean",
+              description: "Indicates whether the authenticated user now likes the target",
+              example: true,
+            },
+            likeCount: {
+              type: "integer",
+              description: "Updated aggregate like count for the target entity",
+              example: 123,
+            },
+          },
+        },
+        // ===== Image Schemas =====
+        Image: {
+          type: "object",
+          required: ["id", "url", "uploaderUserId", "scope", "createdAt"],
+          properties: {
+            id: {type: "string", example: "img123"},
+            url: {type: "string", format: "uri", example: "https://storage.googleapis.com/..."},
+            storagePath: {type: "string", example: "images/user123/uuid.jpg"},
+            name: {type: "string", example: "My Image"},
+            description: {type: "string", example: "A beautiful sunset"},
+            uploaderUserId: {type: "string", example: "user123"},
+            scope: {type: "string", enum: ["public", "members", "private"], example: "public"},
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+          },
+        },
+        // ===== Gallery Schemas =====
+        Gallery: {
+          type: "object",
+          required: ["id", "semester", "title", "imageIds", "createdAt"],
+          properties: {
+            id: {type: "string", example: "gallery123"},
+            semester: {type: "string", example: "2024-1"},
+            title: {type: "string", example: "Spring 2024 Gallery"},
+            description: {type: "string", example: "Photos from our spring events"},
+            imageIds: {
+              type: "array",
+              items: {type: "string"},
+              example: ["img1", "img2", "img3"],
+            },
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+          },
+        },
+        RecruitApplicationRequest: {
+          type: "object",
+          required: [
+            "name",
+            "kaistEmail",
+            "googleEmail",
+            "phone",
+            "department",
+            "studentId",
+            "motivation",
+            "experience",
+            "wantsToDo",
+            "password",
+          ],
+          properties: {
+            name: {type: "string", example: "Jane Doe"},
+            kaistEmail: {type: "string", format: "email", example: "jane@kaist.ac.kr"},
+            googleEmail: {type: "string", format: "email", example: "jane@gmail.com"},
+            phone: {type: "string", example: "+82-10-1234-5678"},
+            department: {type: "string", example: "Computer Science"},
+            studentId: {type: "string", example: "20240000"},
+            motivation: {type: "string", example: "I love building products."},
+            experience: {type: "string", example: "Hackathons, internships"},
+            wantsToDo: {type: "string", example: "Backend development"},
+            githubUsername: {type: "string", example: "jane-dev"},
+            portfolioUrl: {type: "string", format: "uri"},
+            password: {type: "string", format: "password", example: "securePass123!"},
+          },
+        },
+        RecruitLoginRequest: {
+          type: "object",
+          required: ["kaistEmail", "password"],
+          properties: {
+            kaistEmail: {type: "string", format: "email"},
+            password: {type: "string", format: "password"},
+          },
+        },
+        RecruitSessionResponse: {
+          type: "object",
+          required: ["success", "token"],
+          properties: {
+            success: {type: "boolean", example: true},
+            token: {type: "string", description: "Opaque session token"},
+          },
+        },
+        RecruitProfile: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: {type: "string", example: "jane@kaist.ac.kr"},
+            name: {type: "string"},
+            kaistEmail: {type: "string", format: "email"},
+            googleEmail: {type: "string", format: "email"},
+            phone: {type: "string"},
+            department: {type: "string"},
+            studentId: {type: "string"},
+            motivation: {type: "string"},
+            experience: {type: "string"},
+            wantsToDo: {type: "string"},
+            githubUsername: {type: "string"},
+            portfolioUrl: {type: "string", format: "uri"},
+            status: {type: "string", example: "submitted"},
+            createdAt: {type: "string", format: "date-time"},
+            updatedAt: {type: "string", format: "date-time"},
+          },
+        },
+        RecruitUpdateRequest: {
+          type: "object",
+          description: "Subset of profile fields that can be updated",
+          additionalProperties: false,
+          properties: {
+            name: {type: "string"},
+            googleEmail: {type: "string", format: "email"},
+            phone: {type: "string"},
+            department: {type: "string"},
+            studentId: {type: "string"},
+            motivation: {type: "string"},
+            experience: {type: "string"},
+            wantsToDo: {type: "string"},
+            githubUsername: {type: "string"},
+            portfolioUrl: {type: "string", format: "uri"},
+          },
+        },
+        RecruitResetRequest: {
+          type: "object",
+          required: ["kaistEmail"],
+          properties: {
+            kaistEmail: {type: "string", format: "email"},
+          },
+        },
+        RecruitConfig: {
+          type: "object",
+          properties: {
+            isOpen: {type: "boolean"},
+            openAt: {type: "string", format: "date-time"},
+            closeAt: {type: "string", format: "date-time"},
+            messageWhenClosed: {type: "string"},
+            semester: {type: "string"},
+          },
+        },
+      },
+      responses: {
+        BadRequest: {
+          description: "Bad request",
+          content: {
+            "application/json": {
+              schema: {$ref: "#/components/schemas/ErrorResponse"},
+            },
+          },
+        },
+        ValidationError: {
+          description: "Validation failed",
+          content: {
+            "application/json": {
+              schema: {$ref: "#/components/schemas/ValidationErrorResponse"},
+            },
+          },
+        },
+        Unauthorized: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: {$ref: "#/components/schemas/ErrorResponse"},
+            },
+          },
+        },
+        NotFound: {
+          description: "Resource not found",
+          content: {
+            "application/json": {
+              schema: {$ref: "#/components/schemas/ErrorResponse"},
+            },
+          },
+        },
+      },
     },
-    security: [{bearerAuth: []}],
-    paths,
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+    paths: {
+      "/users/link-member": {
+        post: {
+          tags: ["Users"],
+          summary: "Link authenticated user to a member record",
+          description: "Associates the currently authenticated user with a member using a one-time link code.",
+          security: [
+            {
+              bearerAuth: [],
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["linkCode"],
+                  properties: {
+                    linkCode: {
+                      type: "string",
+                      description: "One-time code issued by an admin when creating a member",
+                      example: "GDGOC-123456",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Member linked successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "user"],
+                    properties: {
+                      ok: {
+                        type: "boolean",
+                        example: true,
+                      },
+                      user: {
+                        $ref: "#/components/schemas/User",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "400": {
+              description: "Invalid or missing link code",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/Error",
+                  },
+                },
+              },
+            },
+            "401": {
+              description: "Authentication required",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/Error",
+                  },
+                },
+              },
+            },
+            "404": {
+              description: "Link code not found or already used",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/Error",
+                  },
+                },
+              },
+            },
+            default: {
+              description: "Unexpected error",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/Error",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/posts/{postId}": {
+        get: {
+          tags: ["Posts"],
+          summary: "Get a single post",
+          description: "Returns post content and increments viewCount on 200 OK responses. Returns 304 without incrementing the counter when the client's ETag matches.",
+          parameters: [
+            {
+              name: "postId",
+              in: "path",
+              required: true,
+              schema: {type: "string"},
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Post retrieved successfully (viewCount incremented)",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      post: {$ref: "#/components/schemas/Post"},
+                    },
+                  },
+                },
+              },
+            },
+            "304": {
+              description: "Not modified - viewCount not incremented",
+            },
+            "404": {
+              description: "Post not found",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/Error"},
+                },
+              },
+            },
+          },
+        },
+      },
+      "/recruit/applications": {
+        post: {
+          tags: ["Recruit"],
+          summary: "Submit recruiting application",
+          description: "Wraps the legacy recruitApply Cloud Function.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {$ref: "#/components/schemas/RecruitApplicationRequest"},
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Application stored successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {success: {type: "boolean", example: true}},
+                  },
+                },
+              },
+            },
+            "409": {description: "Application already exists"},
+          },
+        },
+      },
+      "/recruit/login": {
+        post: {
+          tags: ["Recruit"],
+          summary: "Login to recruiting portal",
+          description: "Wraps the legacy recruitLogin Cloud Function.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {$ref: "#/components/schemas/RecruitLoginRequest"},
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Successful login",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/RecruitSessionResponse"},
+                },
+              },
+            },
+            "401": {description: "Invalid credentials"},
+            "423": {description: "Account locked"},
+          },
+        },
+      },
+      "/recruit/me": {
+        get: {
+          tags: ["Recruit"],
+          summary: "Fetch current recruiting profile",
+          security: [{recruitSession: []}],
+          responses: {
+            "200": {
+              description: "Profile loaded",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/RecruitProfile"},
+                },
+              },
+            },
+            "401": {description: "Missing or invalid session token"},
+            "404": {description: "Application not found"},
+          },
+        },
+        patch: {
+          tags: ["Recruit"],
+          summary: "Update recruiting profile",
+          description: "Wraps the legacy recruitUpdate Cloud Function. Requires recruit session token.",
+          security: [{recruitSession: []}],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {$ref: "#/components/schemas/RecruitUpdateRequest"},
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Profile updated",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {success: {type: "boolean", example: true}},
+                  },
+                },
+              },
+            },
+            "400": {description: "No updatable fields provided"},
+            "401": {description: "Missing or invalid session token"},
+          },
+        },
+      },
+      "/recruit/reset-password": {
+        post: {
+          tags: ["Recruit"],
+          summary: "Reset recruiting portal password",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {$ref: "#/components/schemas/RecruitResetRequest"},
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "Reset request processed",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {success: {type: "boolean", example: true}},
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/recruit/config": {
+        get: {
+          tags: ["Recruit"],
+          summary: "Retrieve recruiting configuration",
+          responses: {
+            "200": {
+              description: "Configuration payload",
+              content: {
+                "application/json": {
+                  schema: {$ref: "#/components/schemas/RecruitConfig"},
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   apis: [
-    path.join(__dirname, "../routes/v2/*.ts"),
-    path.join(__dirname, "../types/schema.ts"),
+    path.join(__dirname, "../routes/v2/**/*.ts"),
+    path.join(__dirname, "../controllers/v2/**/*.ts"),
   ],
 };

@@ -1,7 +1,8 @@
-import {Timestamp} from "firebase-admin/firestore";
+import {Timestamp, FieldValue} from "firebase-admin/firestore";
 import {db} from "../config/firebase";
 import {Post, PostData, PostType, PostVisibility} from "../types/post";
 import {encodeCursor, decodeCursor} from "../utils/pagination";
+import {AppError} from "../utils/appError";
 
 const POSTS_COLLECTION = "posts";
 
@@ -95,5 +96,21 @@ export class PostRepo {
           )
         : null;
     return {posts, nextCursor};
+  }
+
+  async incrementViewCount(postId: string): Promise<number> {
+    return db.runTransaction(async (tx) => {
+      const docRef = this.collection.doc(postId);
+      const snapshot = await tx.get(docRef);
+      if (!snapshot.exists) {
+        throw new AppError(404, "POST_NOT_FOUND", "Post not found");
+      }
+      const current = Number((snapshot.data() as Partial<Post>).viewCount ?? 0);
+      const next = current + 1;
+      tx.update(docRef, {
+        viewCount: FieldValue.increment(1),
+      });
+      return next;
+    });
   }
 }

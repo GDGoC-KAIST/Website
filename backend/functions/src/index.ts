@@ -165,6 +165,14 @@ import {v2Router} from "./routes/v2";
 import {errorHandler} from "./middleware/errorHandler";
 import {corsMiddleware} from "./middleware/cors";
 
+process.on("unhandledRejection", (reason) => {
+  console.error("CRITICAL: Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("CRITICAL: Uncaught Exception:", error);
+});
+
 const app = express();
 
 // Middleware

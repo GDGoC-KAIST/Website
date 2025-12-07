@@ -12,6 +12,7 @@ import {adminMigrationRouter} from "./adminMigrationRoutes";
 import {docsRouter} from "./docsRoutes";
 import {rateLimit} from "../../middleware/rateLimiter";
 import {publicCache} from "../../middleware/cacheControl";
+import {recruitRouter} from "./recruitRoutes";
 
 const v2Router = Router();
 
@@ -55,6 +56,9 @@ v2Router.use("/likes", likeRouter);
 
 // Gallery routes
 v2Router.use("/galleries", galleryRouter);
+
+// Public recruit routes
+v2Router.use("/recruit", recruitRouter);
 
 // Admin recruit routes
 v2Router.use("/admin/recruit", adminRecruitRouter);

@@ -1,7 +1,9 @@
 const requiredVars = ["JWT_SECRET", "REFRESH_TOKEN_SECRET", "LINK_CODE_SECRET"] as const;
+const mailjetVars = ["MAILJET_API_KEY", "MAILJET_API_SECRET"] as const;
 
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isTest = nodeEnv === "test";
+const isProd = nodeEnv === "production";
 
 const testDefaults: Partial<Record<typeof requiredVars[number], string>> = {
   JWT_SECRET: "test-jwt-secret",
@@ -16,6 +18,15 @@ function resolveEnv(key: typeof requiredVars[number]): string {
     return testDefaults[key] ?? `test-${key.toLowerCase()}`;
   }
   throw new Error(`Missing required environment variable: ${key}`);
+}
+
+function resolveMailjetEnv(key: typeof mailjetVars[number]): string | undefined {
+  const value = process.env[key];
+  if (value) return value;
+  if (isProd) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return undefined;
 }
 
 const boolean = (value: string | undefined, defaultValue = false) => {
@@ -33,4 +44,8 @@ export const env = {
   commitHash: process.env.COMMIT_HASH ?? "unknown",
   disableEmailSending: boolean(process.env.DISABLE_EMAIL_SENDING),
   disableGithubLogin: boolean(process.env.DISABLE_GITHUB_LOGIN),
+  mailjetApiKey: resolveMailjetEnv("MAILJET_API_KEY"),
+  mailjetApiSecret: resolveMailjetEnv("MAILJET_API_SECRET"),
+  emailFrom: process.env.EMAIL_FROM ?? "noreply@gdgockaist.com",
+  emailFromName: process.env.EMAIL_FROM_NAME ?? "GDGoC KAIST",
 };

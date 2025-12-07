@@ -6,7 +6,6 @@ import firebaseFunctionsTest from "firebase-functions-test";
 import * as admin from "firebase-admin";
 import jwt from "jsonwebtoken";
 import type {Role} from "../../src/types/auth";
-import "../../src/config/firebase";
 
 const workspaceRoot = process.cwd();
 const repoRoot = path.resolve(workspaceRoot, "..");
@@ -22,6 +21,11 @@ if (fs.existsSync(localEnvPath)) {
   dotenv.config({path: localEnvPath, override: false});
 }
 dotenv.config({path: path.resolve(workspaceRoot, ".env"), override: false});
+
+// Set storage emulator host before importing firebase config
+process.env.FIREBASE_STORAGE_EMULATOR_HOST = process.env.FIREBASE_STORAGE_EMULATOR_HOST ?? "127.0.0.1:9199";
+
+import "../../src/config/firebase";
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? "demo-test";
 const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST;

@@ -1,0 +1,1225 @@
+
+> openapi:print
+> ts-node --esm scripts/print-openapi.ts
+
+{
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Bad request"
+      },
+      "NotFound": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Resource not found"
+      },
+      "Unauthorized": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "ValidationError": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationErrorResponse"
+            }
+          }
+        },
+        "description": "Validation failed"
+      }
+    },
+    "schemas": {
+      "Comment": {
+        "properties": {
+          "content": {
+            "example": "Great post!",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "example": "comment123",
+            "type": "string"
+          },
+          "isDeleted": {
+            "example": false,
+            "type": "boolean"
+          },
+          "parentId": {
+            "example": null,
+            "nullable": true,
+            "type": "string"
+          },
+          "targetId": {
+            "example": "post123",
+            "type": "string"
+          },
+          "targetType": {
+            "enum": [
+              "post",
+              "project",
+              "seminar"
+            ],
+            "example": "post",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "writerUserId": {
+            "example": "user123",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "targetType",
+          "targetId",
+          "writerUserId",
+          "content",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "CursorPagination": {
+        "properties": {
+          "nextCursor": {
+            "description": "Cursor for next page, null if no more pages",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Error": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorResponse"
+          }
+        ]
+      },
+      "ErrorCode": {
+        "enum": [
+          "VALIDATION_ERROR",
+          "INVALID_INPUT",
+          "UNAUTHORIZED",
+          "TOKEN_EXPIRED",
+          "REFRESH_TOKEN_REUSED",
+          "FORBIDDEN",
+          "INSUFFICIENT_ROLE",
+          "NOT_FOUND",
+          "ALREADY_EXISTS",
+          "CONFLICT",
+          "TOO_MANY_REQUESTS",
+          "INTERNAL_ERROR"
+        ],
+        "type": "string"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "issues": {
+            "items": {
+              "properties": {
+                "message": {
+                  "example": "linkCode is required",
+                  "type": "string"
+                },
+                "path": {
+                  "example": "body.linkCode",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "source": {
+            "description": "Which part of the request failed validation",
+            "enum": [
+              "body",
+              "query",
+              "params",
+              "system"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "issues"
+        ],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "properties": {
+              "code": {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              "details": {
+                "description": "Optional contextual information or validation details",
+                "items": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                },
+                "nullable": true,
+                "type": "array"
+              },
+              "message": {
+                "example": "Authentication required",
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "Gallery": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "example": "Photos from our spring events",
+            "type": "string"
+          },
+          "id": {
+            "example": "gallery123",
+            "type": "string"
+          },
+          "imageIds": {
+            "example": [
+              "img1",
+              "img2",
+              "img3"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "semester": {
+            "example": "2024-1",
+            "type": "string"
+          },
+          "title": {
+            "example": "Spring 2024 Gallery",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "semester",
+          "title",
+          "imageIds",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "Image": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "example": "A beautiful sunset",
+            "type": "string"
+          },
+          "id": {
+            "example": "img123",
+            "type": "string"
+          },
+          "name": {
+            "example": "My Image",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "public",
+              "members",
+              "private"
+            ],
+            "example": "public",
+            "type": "string"
+          },
+          "storagePath": {
+            "example": "images/user123/uuid.jpg",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uploaderUserId": {
+            "example": "user123",
+            "type": "string"
+          },
+          "url": {
+            "example": "https://storage.googleapis.com/...",
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "uploaderUserId",
+          "scope",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "LikeToggleResult": {
+        "properties": {
+          "likeCount": {
+            "description": "Updated aggregate like count for the target entity",
+            "example": 123,
+            "type": "integer"
+          },
+          "liked": {
+            "description": "Indicates whether the authenticated user now likes the target",
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "liked",
+          "likeCount"
+        ],
+        "type": "object"
+      },
+      "Pagination": {
+        "properties": {
+          "cursor": {
+            "description": "Cursor for pagination (opaque string)",
+            "nullable": true,
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "description": "Number of items per page",
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number (1-indexed)",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Post": {
+        "properties": {
+          "authorMemberId": {
+            "example": "member123",
+            "type": "string"
+          },
+          "authorUserId": {
+            "example": "user123",
+            "type": "string"
+          },
+          "commentCount": {
+            "example": 3,
+            "type": "integer"
+          },
+          "content": {
+            "$ref": "#/components/schemas/TipTapDoc"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "excerpt": {
+            "example": "A brief summary...",
+            "type": "string"
+          },
+          "id": {
+            "example": "post123",
+            "type": "string"
+          },
+          "isDeleted": {
+            "example": false,
+            "type": "boolean"
+          },
+          "likeCount": {
+            "example": 5,
+            "type": "integer"
+          },
+          "plainText": {
+            "example": "Plain text version",
+            "type": "string"
+          },
+          "readingTime": {
+            "description": "Estimated reading time in minutes",
+            "example": 5,
+            "type": "integer"
+          },
+          "tags": {
+            "example": [
+              "tutorial",
+              "typescript"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "thumbnailUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "title": {
+            "example": "My First Post",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "blog",
+              "notice"
+            ],
+            "example": "blog",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "viewCount": {
+            "example": 42,
+            "type": "integer"
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "members_only",
+              "private"
+            ],
+            "example": "public",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "content",
+          "authorUserId",
+          "visibility",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "RecruitApplicationRequest": {
+        "properties": {
+          "department": {
+            "example": "Computer Science",
+            "type": "string"
+          },
+          "experience": {
+            "example": "Hackathons, internships",
+            "type": "string"
+          },
+          "githubUsername": {
+            "example": "jane-dev",
+            "type": "string"
+          },
+          "googleEmail": {
+            "example": "jane@gmail.com",
+            "format": "email",
+            "type": "string"
+          },
+          "kaistEmail": {
+            "example": "jane@kaist.ac.kr",
+            "format": "email",
+            "type": "string"
+          },
+          "motivation": {
+            "example": "I love building products.",
+            "type": "string"
+          },
+          "name": {
+            "example": "Jane Doe",
+            "type": "string"
+          },
+          "password": {
+            "example": "securePass123!",
+            "format": "password",
+            "type": "string"
+          },
+          "phone": {
+            "example": "+82-10-1234-5678",
+            "type": "string"
+          },
+          "portfolioUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "studentId": {
+            "example": "20240000",
+            "type": "string"
+          },
+          "wantsToDo": {
+            "example": "Backend development",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kaistEmail",
+          "googleEmail",
+          "phone",
+          "department",
+          "studentId",
+          "motivation",
+          "experience",
+          "wantsToDo",
+          "password"
+        ],
+        "type": "object"
+      },
+      "RecruitConfig": {
+        "properties": {
+          "closeAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "messageWhenClosed": {
+            "type": "string"
+          },
+          "openAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "semester": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecruitLoginRequest": {
+        "properties": {
+          "kaistEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kaistEmail",
+          "password"
+        ],
+        "type": "object"
+      },
+      "RecruitProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "experience": {
+            "type": "string"
+          },
+          "githubUsername": {
+            "type": "string"
+          },
+          "googleEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "id": {
+            "example": "jane@kaist.ac.kr",
+            "type": "string"
+          },
+          "kaistEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "motivation": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "portfolioUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "status": {
+            "example": "submitted",
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "wantsToDo": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecruitResetRequest": {
+        "properties": {
+          "kaistEmail": {
+            "format": "email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kaistEmail"
+        ],
+        "type": "object"
+      },
+      "RecruitSessionResponse": {
+        "properties": {
+          "success": {
+            "example": true,
+            "type": "boolean"
+          },
+          "token": {
+            "description": "Opaque session token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "token"
+        ],
+        "type": "object"
+      },
+      "RecruitUpdateRequest": {
+        "additionalProperties": false,
+        "description": "Subset of profile fields that can be updated",
+        "properties": {
+          "department": {
+            "type": "string"
+          },
+          "experience": {
+            "type": "string"
+          },
+          "githubUsername": {
+            "type": "string"
+          },
+          "googleEmail": {
+            "format": "email",
+            "type": "string"
+          },
+          "motivation": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "portfolioUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "wantsToDo": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TipTapDoc": {
+        "additionalProperties": true,
+        "description": "TipTap editor JSON structure - flexible schema for rich text content",
+        "example": {
+          "content": [
+            {
+              "content": [
+                {
+                  "text": "Hello World",
+                  "type": "text"
+                }
+              ],
+              "type": "paragraph"
+            }
+          ],
+          "type": "doc"
+        },
+        "type": "object"
+      },
+      "User": {
+        "properties": {
+          "bio": {
+            "example": "Software engineer",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "example": "user@example.com",
+            "format": "email",
+            "type": "string"
+          },
+          "githubId": {
+            "example": "1001",
+            "type": "string"
+          },
+          "githubProfileImageUrl": {
+            "example": "https://avatars.githubusercontent.com/u/1001",
+            "format": "uri",
+            "type": "string"
+          },
+          "githubUsername": {
+            "example": "testuser",
+            "type": "string"
+          },
+          "id": {
+            "example": "1001",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "memberId": {
+            "example": "member123",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "example": "Test User",
+            "type": "string"
+          },
+          "profileImageUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "roles": {
+            "example": [
+              "USER",
+              "MEMBER"
+            ],
+            "items": {
+              "enum": [
+                "USER",
+                "MEMBER",
+                "ADMIN"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "stacks": {
+            "example": [
+              "React",
+              "TypeScript"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "githubId",
+          "githubUsername",
+          "roles",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ValidationErrorResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
+          {
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": {
+                    "default": "VALIDATION_ERROR",
+                    "enum": [
+                      "VALIDATION_ERROR"
+                    ]
+                  },
+                  "details": {
+                    "items": {
+                      "$ref": "#/components/schemas/ErrorDetail"
+                    }
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained from /v2/auth/login/github",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "recruitSession": {
+        "bearerFormat": "RecruitSession",
+        "description": "Opaque session token returned by /v2/recruit/login",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "GDGoC KAIST",
+      "url": "https://gdgoc.kaist.ac.kr"
+    },
+    "description": "RESTful API for GDGoC KAIST website - V2 endpoints with JWT authentication, TipTap content, and Firebase integration",
+    "title": "GDGoC KAIST API",
+    "version": "2.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/posts/{postId}": {
+      "get": {
+        "description": "Returns post content and increments viewCount on 200 OK responses. Returns 304 without incrementing the counter when the client's ETag matches.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "postId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "post": {
+                      "$ref": "#/components/schemas/Post"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Post retrieved successfully (viewCount incremented)"
+          },
+          "304": {
+            "description": "Not modified - viewCount not incremented"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Post not found"
+          }
+        },
+        "summary": "Get a single post",
+        "tags": [
+          "Posts"
+        ]
+      }
+    },
+    "/recruit/applications": {
+      "post": {
+        "description": "Wraps the legacy recruitApply Cloud Function.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecruitApplicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "success": {
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Application stored successfully"
+          },
+          "409": {
+            "description": "Application already exists"
+          }
+        },
+        "summary": "Submit recruiting application",
+        "tags": [
+          "Recruit"
+        ]
+      }
+    },
+    "/recruit/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecruitConfig"
+                }
+              }
+            },
+            "description": "Configuration payload"
+          }
+        },
+        "summary": "Retrieve recruiting configuration",
+        "tags": [
+          "Recruit"
+        ]
+      }
+    },
+    "/recruit/login": {
+      "post": {
+        "description": "Wraps the legacy recruitLogin Cloud Function.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecruitLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecruitSessionResponse"
+                }
+              }
+            },
+            "description": "Successful login"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "423": {
+            "description": "Account locked"
+          }
+        },
+        "summary": "Login to recruiting portal",
+        "tags": [
+          "Recruit"
+        ]
+      }
+    },
+    "/recruit/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecruitProfile"
+                }
+              }
+            },
+            "description": "Profile loaded"
+          },
+          "401": {
+            "description": "Missing or invalid session token"
+          },
+          "404": {
+            "description": "Application not found"
+          }
+        },
+        "security": [
+          {
+            "recruitSession": []
+          }
+        ],
+        "summary": "Fetch current recruiting profile",
+        "tags": [
+          "Recruit"
+        ]
+      },
+      "patch": {
+        "description": "Wraps the legacy recruitUpdate Cloud Function. Requires recruit session token.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecruitUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "success": {
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Profile updated"
+          },
+          "400": {
+            "description": "No updatable fields provided"
+          },
+          "401": {
+            "description": "Missing or invalid session token"
+          }
+        },
+        "security": [
+          {
+            "recruitSession": []
+          }
+        ],
+        "summary": "Update recruiting profile",
+        "tags": [
+          "Recruit"
+        ]
+      }
+    },
+    "/recruit/reset-password": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecruitResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "success": {
+                      "example": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Reset request processed"
+          }
+        },
+        "summary": "Reset recruiting portal password",
+        "tags": [
+          "Recruit"
+        ]
+      }
+    },
+    "/users/link-member": {
+      "post": {
+        "description": "Associates the currently authenticated user with a member using a one-time link code.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "linkCode": {
+                    "description": "One-time code issued by an admin when creating a member",
+                    "example": "GDGOC-123456",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "linkCode"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "ok": {
+                      "example": true,
+                      "type": "boolean"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "user"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Member linked successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid or missing link code"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Link code not found or already used"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unexpected error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Link authenticated user to a member record",
+        "tags": [
+          "Users"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "Local Development (Firebase Emulator)",
+      "url": "http://127.0.0.1:5001/demo-test/us-central1/apiV2"
+    },
+    {
+      "description": "Production (Replace with actual Firebase Functions URL)",
+      "url": "https://your-project.cloudfunctions.net/apiV2"
+    }
+  ],
+  "tags": []
+}

@@ -51,10 +51,7 @@ export async function linkMember(
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
-    const {linkCode} = req.body as {linkCode?: string};
-    if (!linkCode) {
-      throw new AppError(400, "INVALID_ARGUMENT", "linkCode is required");
-    }
+    const {linkCode} = req.body as {linkCode: string};
     await memberLinkService.linkMember(user.sub, linkCode);
     const profile = await userService.getMe(user.sub);
     res.status(200).json({ok: true, user: serializeUser(profile)});

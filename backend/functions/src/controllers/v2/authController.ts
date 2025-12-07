@@ -16,11 +16,7 @@ export async function loginGithub(
     if (env.disableGithubLogin) {
       throw new AppError(503, "SERVICE_DISABLED", "GitHub login is temporarily disabled");
     }
-    const {githubAccessToken} = req.body as {githubAccessToken?: string};
-
-    if (!githubAccessToken) {
-      throw new AppError(400, "INVALID_REQUEST", "githubAccessToken is required");
-    }
+    const {githubAccessToken} = req.body as {githubAccessToken: string};
 
     const result = await authService.loginWithGitHub(githubAccessToken, {
       ip: req.ip,
@@ -43,10 +39,7 @@ export async function refresh(
   next: NextFunction
 ): Promise<void> {
   try {
-    const {refreshToken} = req.body as {refreshToken?: string};
-    if (!refreshToken) {
-      throw new AppError(400, "INVALID_ARGUMENT", "refreshToken is required");
-    }
+    const {refreshToken} = req.body as {refreshToken: string};
 
     const result = await authService.refreshSession(refreshToken, {
       ip: req.ip,
@@ -65,6 +58,7 @@ export async function logout(
   next: NextFunction
 ): Promise<void> {
   try {
+    console.log("[DEBUG] Logout start. Body:", req.body, "Query:", req.query);
     const user = req.user;
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
@@ -102,6 +96,7 @@ export async function logout(
     }
 
     await sessionRepo.revokeSession(currentSid);
+    console.log("[DEBUG] Logout success. Sending response.");
     res.status(200).json({ok: true});
   } catch (error) {
     next(error);

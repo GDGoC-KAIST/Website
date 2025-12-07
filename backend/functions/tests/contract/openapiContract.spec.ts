@@ -138,4 +138,53 @@ describe("OpenAPI Contract Tests", () => {
       throw error;
     }
   });
+
+  describe("Recruit V2 Contract", () => {
+    it("should have all 6 recruit endpoints defined in OpenAPI", () => {
+      const paths = Object.keys(spec.paths || {});
+      const recruitPaths = [
+        "/recruit/applications",
+        "/recruit/login",
+        "/recruit/me",
+        "/recruit/reset-password",
+        "/recruit/config",
+      ];
+
+      recruitPaths.forEach((p) => {
+        expect(paths).toContain(p);
+      });
+    });
+
+    it("should require recruitSession auth for /recruit/me endpoints", () => {
+      const mePath = spec.paths["/recruit/me"];
+      expect(mePath).toBeDefined();
+      expect(mePath.get).toBeDefined();
+      expect(mePath.patch).toBeDefined();
+      expect(mePath.get.security).toEqual([{recruitSession: []}]);
+      expect(mePath.patch.security).toEqual([{recruitSession: []}]);
+    });
+
+    it("should have recruitSession security scheme defined", () => {
+      expect(spec.components?.securitySchemes?.recruitSession).toBeDefined();
+      expect(spec.components.securitySchemes.recruitSession.type).toBe("http");
+      expect(spec.components.securitySchemes.recruitSession.scheme).toBe("bearer");
+    });
+
+    it("should have all recruit schemas defined", () => {
+      const schemas = spec.components?.schemas || {};
+      const requiredSchemas = [
+        "RecruitApplicationRequest",
+        "RecruitLoginRequest",
+        "RecruitSessionResponse",
+        "RecruitProfile",
+        "RecruitUpdateRequest",
+        "RecruitResetRequest",
+        "RecruitConfig",
+      ];
+
+      requiredSchemas.forEach((schemaName) => {
+        expect(schemas[schemaName]).toBeDefined();
+      });
+    });
+  });
 });

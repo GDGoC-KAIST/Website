@@ -81,7 +81,7 @@ describe("V2 Integration Flow", () => {
       .send({refreshToken: login.refreshToken})
       .expect(401);
 
-    expect(reuseAttempt.body.error?.code).toBe("REFRESH_REUSE_DETECTED");
+    expect(reuseAttempt.body.error?.code).toBe("REFRESH_TOKEN_REUSED");
 
     await request(app)
       .post("/v2/auth/refresh")
@@ -169,6 +169,21 @@ describe("V2 Integration Flow", () => {
 
     const memberDoc = await admin.firestore().collection("members").doc(member.id).get();
     expect(memberDoc.data()?.userId).toBe(login.user.id);
+  });
+
+  it("does not expose deprecated /v2/users/me/link-member path", async () => {
+    const login = await loginWithGithubProfile({
+      id: 2003,
+      login: "linker-deprecated",
+      email: "linker-deprecated@example.com",
+      name: "Deprecated Path",
+    });
+
+    await request(app)
+      .post("/v2/users/me/link-member")
+      .set("Authorization", `Bearer ${login.accessToken}`)
+      .send({linkCode: "INVALID"})
+      .expect(404);
   });
 
   it("runs content lifecycle (post/comment/like) and updates counters", async () => {

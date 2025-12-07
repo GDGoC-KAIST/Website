@@ -3,6 +3,7 @@ import {CommentService, CreateCommentDto, ListCommentQuery, UserContext} from ".
 import {AppError} from "../../utils/appError";
 import type {Comment} from "../../types/schema";
 import {Timestamp} from "firebase-admin/firestore";
+import type {CreateCommentInput, GetCommentsInput} from "../../validators/schemas/commentSchemas";
 
 const commentService = new CommentService();
 
@@ -23,7 +24,8 @@ function mapOptionalUser(req: Request): UserContext | undefined {
 export async function createComment(req: Request, res: Response, next: NextFunction) {
   try {
     const user = mapUser(req);
-    const comment = await commentService.createComment(user, req.body as CreateCommentDto);
+    const payload = req.body as CreateCommentInput;
+    const comment = await commentService.createComment(user, payload as CreateCommentDto);
     res.status(201).json({comment: serializeComment(comment)});
   } catch (error) {
     next(error);
@@ -33,13 +35,14 @@ export async function createComment(req: Request, res: Response, next: NextFunct
 export async function listComments(req: Request, res: Response, next: NextFunction) {
   try {
     const user = mapOptionalUser(req);
+    const query = req.query as unknown as GetCommentsInput;
     const result = await commentService.listComments(user, {
-      targetType: req.query.targetType as any,
-      targetId: req.query.targetId as string,
-      limit: req.query.limit ? Number(req.query.limit) : undefined,
-      cursor: req.query.cursor as string | undefined,
-      parentId: req.query.parentId as string | undefined,
-    } as ListCommentQuery);
+      targetType: query.targetType as ListCommentQuery["targetType"],
+      targetId: query.targetId,
+      limit: query.limit,
+      cursor: query.cursor,
+      parentId: query.parentId,
+    });
     res.status(200).json({
       comments: result.comments.map(serializeComment),
       nextCursor: result.nextCursor,
