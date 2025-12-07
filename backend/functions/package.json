@@ -13,7 +13,7 @@
 		"test:gate": "node scripts/pick-ports.mjs && dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions \"dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand tests/contract tests/security tests/smoke --detectOpenHandles\"",
 		"test": "npm run test:integration && npm run test:gate",
 		"openapi:print": "ts-node --esm scripts/print-openapi.ts",
-		"openapi:check": "npm run openapi:print > current-spec.json && git diff --exit-code current-spec.json",
+		"openapi:check": "npm run openapi:print > current-spec.json && git diff --no-index --exit-code openapi.json current-spec.json && rm current-spec.json",
 		"ssot:gate": "ts-node --esm scripts/ssot-gate.ts"
 	},
 	"engines": {

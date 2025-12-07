@@ -1,5 +1,7 @@
 import swaggerJsdoc from "swagger-jsdoc";
-import {openApiOptions} from "../src/docs/openapi.ts";
+
+const openApiModule = await import("../src/docs/openapi.ts");
+const {openApiOptions} = openApiModule as {openApiOptions: import("swagger-jsdoc").Options};
 
 // 키를 알파벳 순으로 정렬해 항상 동일한 JSON을 생성한다.
 function sortKeys<T>(input: T): T {
