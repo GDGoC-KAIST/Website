@@ -1,8 +1,8 @@
 import {Router} from "express";
-import {loginGithub, refresh, logout} from "../../controllers/v2/authController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {validateRequest} from "../../middleware/validateRequest";
-import {loginSchema, refreshSchema} from "../../validators/schemas/authSchemas";
+import {loginGithub, refresh, logout} from "../../controllers/v2/authController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {validateRequest} from "../../middleware/validateRequest.ts";
+import {loginSchema, refreshSchema} from "../../validators/schemas/authSchemas.ts";
 
 const authRouter = Router();
 

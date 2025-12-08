@@ -1,7 +1,7 @@
 import type {Request, Response, NextFunction} from "express";
-import {UserService, type UserProfile} from "../../services/userService";
-import {AppError} from "../../utils/appError";
-import {MemberLinkService} from "../../services/memberService";
+import {UserService, type UserProfile} from "../../services/userService.ts";
+import {AppError} from "../../utils/appError.ts";
+import {MemberLinkService} from "../../services/memberService.ts";
 import {Timestamp} from "firebase-admin/firestore";
 
 const userService = new UserService();
@@ -13,7 +13,7 @@ export async function getMe(
   next: NextFunction
 ): Promise<void> {
   try {
-    const user = req.user;
+    const {user} = req;
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
@@ -30,13 +30,27 @@ export async function patchMe(
   next: NextFunction
 ): Promise<void> {
   try {
-    const user = req.user;
+    const {user} = req;
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
     const body = req.body ?? {};
-    const allowedFields = ["name", "phone", "department", "studentId", "profileImage"];
-    const forbiddenFields = ["role", "roles", "uid", "id", "email", "createdAt", "updatedAt"];
+    const allowedFields = [
+      "name",
+      "phone",
+      "department",
+      "studentId",
+      "profileImage",
+    ];
+    const forbiddenFields = [
+      "role",
+      "roles",
+      "uid",
+      "id",
+      "email",
+      "createdAt",
+      "updatedAt",
+    ];
 
     const keys = Object.keys(body);
     if (keys.length === 0) {
@@ -94,7 +108,7 @@ export async function linkMember(
   next: NextFunction
 ): Promise<void> {
   try {
-    const user = req.user;
+    const {user} = req;
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }
@@ -107,7 +121,10 @@ export async function linkMember(
   }
 }
 
-type SerializableUser = Omit<UserProfile, "createdAt" | "updatedAt" | "lastLoginAt"> & {
+type SerializableUser = Omit<
+  UserProfile,
+  "createdAt" | "updatedAt" | "lastLoginAt"
+> & {
   createdAt: string | null;
   updatedAt: string | null;
   lastLoginAt: string | null;

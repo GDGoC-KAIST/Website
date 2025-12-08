@@ -31,6 +31,10 @@ export class AppError extends Error {
     return new AppError(403, ErrorCode.FORBIDDEN, message);
   }
 
+  static tooManyRequests(message: string, details?: unknown) {
+    return new AppError(429, ErrorCode.TOO_MANY_REQUESTS, message, details);
+  }
+
   static notFound(message: string) {
     return new AppError(404, ErrorCode.NOT_FOUND, message);
   }

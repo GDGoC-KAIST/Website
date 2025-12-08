@@ -176,12 +176,9 @@ process.on("uncaughtException", (error) => {
 
 const app = express();
 
-// Enable trust proxy when behind Cloud Run / Firebase Hosting / Emulator
-if (process.env.K_SERVICE || process.env.FIREBASE_CONFIG || process.env.FUNCTIONS_EMULATOR === "true") {
-  app.set("trust proxy", true);
-} else {
-  app.set("trust proxy", 1);
-}
+// Enable trust proxy hop configuration for load balancers / reverse proxies
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+app.set("trust proxy", trustProxyHops);
 
 // Middleware
 app.use(telemetryMiddleware);

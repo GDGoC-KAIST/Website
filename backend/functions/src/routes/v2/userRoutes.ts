@@ -1,8 +1,8 @@
 import {Router} from "express";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {getMe, patchMe, linkMember} from "../../controllers/v2/userController";
-import {validateRequest} from "../../middleware/validateRequest";
-import {linkMemberSchema} from "../../validators/schemas/userSchemas";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {getMe, patchMe, linkMember} from "../../controllers/v2/userController.ts";
+import {validateRequest} from "../../middleware/validateRequest.ts";
+import {linkMemberSchema} from "../../validators/schemas/userSchemas.ts";
 
 const userRouter = Router();
 

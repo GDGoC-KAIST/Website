@@ -1,19 +1,12 @@
 import "express";
 import type {AccessTokenPayload} from "./auth";
+import type {TelemetryData} from "./telemetry";
 
 declare global {
   namespace Express {
     interface Request {
       user?: AccessTokenPayload;
-      telemetry?: {
-        ipHash?: string;
-        uaSummary?: {
-          deviceType?: string;
-          browserFamily?: string;
-          osFamily?: string;
-          isBot?: boolean;
-        };
-      };
+      telemetry?: TelemetryData;
     }
   }
 }

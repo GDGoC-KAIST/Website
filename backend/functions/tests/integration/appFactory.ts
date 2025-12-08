@@ -4,6 +4,7 @@ import {corsMiddleware} from "../../src/middleware/cors";
 import {errorHandler} from "../../src/middleware/errorHandler";
 import {requestLogger} from "../../src/middleware/requestLogger";
 import {telemetryMiddleware} from "../../src/middleware/telemetry";
+import {healthRouter} from "../../src/routes/healthRoutes";
 
 export function createTestApp(): express.Express {
   const app = express();
@@ -16,6 +17,8 @@ export function createTestApp(): express.Express {
   app.use(requestLogger);
   app.use(corsMiddleware);
   app.use(express.json());
+  // Expose health for degrade-mode tests at root
+  app.use("/healthz", healthRouter);
   app.use("/v2", v2Router);
   app.use(errorHandler);
   return app;

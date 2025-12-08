@@ -1,27 +1,27 @@
 import {Router} from "express";
-import {apply, login, me, updateMe, resetPassword, config} from "../../controllers/v2/recruitController";
-import {rateLimit, MemoryRateLimitStore} from "../../middleware/rateLimiter";
-import {recruitAuthMiddleware} from "../../middleware/recruitAuthMiddleware";
-import {recruitLegacyErrorBridge} from "../../middleware/recruitLegacyErrorBridge";
+import {apply, login, me, updateMe, resetPassword, config} from "../../controllers/v2/recruitController.ts";
+import {recruitAuthMiddleware} from "../../middleware/recruitAuthMiddleware.ts";
+import {recruitLegacyErrorBridge} from "../../middleware/recruitLegacyErrorBridge.ts";
+import {rateLimit, MemoryRateLimitStore} from "../../middleware/rateLimiter.ts";
 
 const recruitRouter = Router();
 
-// Create dedicated stores for recruit endpoints (exported for testing)
+// Exported for isolated rate-limit tests
 export const recruitApplyStore = new MemoryRateLimitStore();
 export const recruitLoginStore = new MemoryRateLimitStore();
 
 const applyLimiter = rateLimit({
-  windowMs: 60_000,
-  max: 5,
-  keyGenerator: (req) => req.ip || "unknown",
-  store: recruitApplyStore,
+	windowMs: 60_000,
+	max: 5,
+	keyGenerator: (req) => req.ip || "unknown",
+	store: recruitApplyStore,
 });
 
 const loginLimiter = rateLimit({
-  windowMs: 60_000,
-  max: 20,
-  keyGenerator: (req) => req.ip || "unknown",
-  store: recruitLoginStore,
+	windowMs: 60_000,
+	max: 20,
+	keyGenerator: (req) => req.ip || "unknown",
+	store: recruitLoginStore,
 });
 
 // Public endpoints

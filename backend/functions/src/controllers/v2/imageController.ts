@@ -1,6 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
-import {ImageService, ListImageQuery, UpdateImageDto, UserContext} from "../../services/imageService";
-import {AppError} from "../../utils/appError";
+import {ImageService, ListImageQuery, UpdateImageDto, UserContext} from "../../services/imageService.ts";
+import {AppError} from "../../utils/appError.ts";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 

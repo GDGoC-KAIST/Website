@@ -5,7 +5,7 @@ const DOCS_DIR = path.resolve(process.cwd(), "docs/audit");
 const SRC_ROOT = process.cwd();
 
 // Matches patterns like "src/path/to/file.ts:10" or "src/path/to/file.ts:10-20"
-const EVIDENCE_REGEX = /([a-zA-Z0-9_\-.\/]+\.(ts|js|json)):(\d+)(-(\d+))?/g;
+const EVIDENCE_REGEX = /([a-zA-Z0-9_.-/]+\.(ts|js|json)):(\d+)(-(\d+))?/g;
 
 let hasError = false;
 

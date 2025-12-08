@@ -1,13 +1,13 @@
 import {Request, Response, NextFunction} from "express";
-import {PostService, CreatePostDto, UpdatePostDto} from "../../services/postService";
-import {AppError} from "../../utils/appError";
-import {validateContent} from "../../validators/contentValidator";
-import {sanitizeContent} from "../../services/contentSanitizer";
-import type {TipTapDoc} from "../../types/tiptap";
-import type {Post} from "../../types/post";
+import {PostService, CreatePostDto, UpdatePostDto} from "../../services/postService.ts";
+import {AppError} from "../../utils/appError.ts";
+import {validateContent} from "../../validators/contentValidator.ts";
+import {sanitizeContent} from "../../services/contentSanitizer.ts";
+import type {TipTapDoc} from "../../types/tiptap.ts";
+import type {Post} from "../../types/post.ts";
 import {Timestamp} from "firebase-admin/firestore";
 import {createHash} from "crypto";
-import {PostRepo} from "../../repositories/postRepo";
+import {PostRepo} from "../../repositories/postRepo.ts";
 
 const postService = new PostService();
 const postRepo = new PostRepo();

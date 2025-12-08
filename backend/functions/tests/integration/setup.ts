@@ -45,6 +45,9 @@ export async function setupTestEnv(): Promise<void> {
   process.env.JWT_SECRET = process.env.JWT_SECRET || "test-jwt-secret";
   process.env.REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "test-refresh-secret";
   process.env.LINK_CODE_SECRET = process.env.LINK_CODE_SECRET || "test-link-secret";
+  process.env.IP_HASH_SALT = process.env.IP_HASH_SALT || "test-ip-hash-salt";
+  process.env.ABUSE_GUARD_STORE = process.env.ABUSE_GUARD_STORE || "firestore";
+  process.env.TRUST_PROXY_HOPS = process.env.TRUST_PROXY_HOPS || "1";
   process.env.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID ?? "test-aws-key";
   process.env.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY ?? "test-aws-secret";
   process.env.SES_REGION = process.env.SES_REGION ?? "ap-northeast-2";
@@ -60,8 +63,8 @@ export async function teardownTestEnv(): Promise<void> {
   await Promise.all(admin.apps.map((app) => app?.delete()));
 }
 
-export async function clearFirestore(): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
+async function purgeFirestore(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const req = http.request(
       {
         method: "DELETE",
@@ -96,6 +99,21 @@ export async function clearFirestore(): Promise<void> {
     });
     req.end();
   });
+}
+
+export async function clearFirestore(retries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      await purgeFirestore();
+      return;
+    } catch (error) {
+      if (attempt >= retries) {
+        throw error;
+      }
+      // Brief backoff to avoid flaky emulator socket resets between tests
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
 }
 
 export function createAuthHeaders(userId: string, roles: Role[] = ["USER"]): Record<string, string> {

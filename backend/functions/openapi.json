@@ -1,7 +1,3 @@
-
-> openapi:print
-> ts-node --project tsconfig.scripts.json --esm scripts/print-openapi.ts
-
 {
   "components": {
     "responses": {
@@ -257,8 +253,62 @@
         ],
         "type": "object"
       },
+      "HealthCheckDependencies": {
+        "description": "Reported when deep=1",
+        "properties": {
+          "firestore": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up",
+            "type": "string"
+          },
+          "redis": {
+            "enum": [
+              "up",
+              "down",
+              "skipped"
+            ],
+            "example": "skipped",
+            "type": "string"
+          },
+          "storage": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HealthCheckFailureResponse": {
+        "properties": {
+          "dependencies": {
+            "$ref": "#/components/schemas/HealthCheckDependencies"
+          },
+          "error": {
+            "example": "Dependency Failure",
+            "type": "string"
+          },
+          "ok": {
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "error"
+        ],
+        "type": "object"
+      },
       "HealthCheckResponse": {
         "properties": {
+          "dependencies": {
+            "$ref": "#/components/schemas/HealthCheckDependencies"
+          },
           "ok": {
             "example": true,
             "type": "boolean"
@@ -331,18 +381,6 @@
           "uploaderUserId",
           "scope",
           "createdAt"
-        ],
-        "type": "object"
-      },
-      "LegacyErrorResponse": {
-        "properties": {
-          "error": {
-            "example": "Service Unavailable",
-            "type": "string"
-          }
-        },
-        "required": [
-          "error"
         ],
         "type": "object"
       },
@@ -1025,6 +1063,20 @@
     },
     "/healthz": {
       "get": {
+        "parameters": [
+          {
+            "description": "Set to 1 to perform dependency checks (Firestore, Storage, Redis)",
+            "in": "query",
+            "name": "deep",
+            "required": false,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1040,14 +1092,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LegacyErrorResponse"
+                  "$ref": "#/components/schemas/HealthCheckFailureResponse"
                 }
               }
             },
             "description": "Service unavailable"
           }
         },
-        "summary": "서버 상태 및 DB 연결 확인",
+        "summary": "서버 상태 및 종속성 확인",
         "tags": [
           "System"
         ]

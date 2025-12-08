@@ -1,6 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
-import {MigrationService} from "../../services/migrationService";
-import {AppError} from "../../utils/appError";
+import {MigrationService} from "../../services/migrationService.ts";
+import {AppError} from "../../utils/appError.ts";
 
 const migrationService = new MigrationService();
 

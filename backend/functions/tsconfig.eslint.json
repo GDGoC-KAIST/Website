@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "perf/**/*",
+    "*.ts",
+    "*.mts",
+    "*.js",
+    ".eslintrc.js",
+    "docs/**/*"
+  ],
+  "exclude": [
+    "lib",
+    "node_modules",
+    ".tmp",
+    "generated"
+  ]
+}

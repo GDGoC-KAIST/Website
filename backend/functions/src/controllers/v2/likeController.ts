@@ -1,6 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
-import {LikeService} from "../../services/likeService";
-import {AppError} from "../../utils/appError";
+import {LikeService} from "../../services/likeService.ts";
+import {AppError} from "../../utils/appError.ts";
 
 const likeService = new LikeService();
 

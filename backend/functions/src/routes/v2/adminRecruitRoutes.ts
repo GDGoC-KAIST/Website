@@ -4,9 +4,9 @@ import {
   listRecruitApplications,
   updateRecruitApplicationStatus,
   updateRecruitConfig,
-} from "../../controllers/v2/adminRecruitController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {requireAdmin} from "../../middleware/requireRole";
+} from "../../controllers/v2/adminRecruitController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {requireAdmin} from "../../middleware/requireRole.ts";
 
 const adminRecruitRouter = Router();
 

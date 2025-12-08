@@ -181,6 +181,15 @@ export const openApiOptions: Options = {
             },
           },
         },
+        HealthCheckDependencies: {
+          type: "object",
+          description: "Reported when deep=1",
+          properties: {
+            firestore: {type: "string", enum: ["up", "down"], example: "up"},
+            storage: {type: "string", enum: ["up", "down"], example: "up"},
+            redis: {type: "string", enum: ["up", "down", "skipped"], example: "skipped"},
+          },
+        },
         HealthCheckResponse: {
           type: "object",
           required: ["ok", "service", "ts"],
@@ -188,13 +197,16 @@ export const openApiOptions: Options = {
             ok: {type: "boolean", example: true},
             service: {type: "string", example: "functions"},
             ts: {type: "string", format: "date-time", example: "2024-01-01T00:00:00.000Z"},
+            dependencies: {$ref: "#/components/schemas/HealthCheckDependencies"},
           },
         },
-        LegacyErrorResponse: {
+        HealthCheckFailureResponse: {
           type: "object",
-          required: ["error"],
+          required: ["ok", "error"],
           properties: {
-            error: {type: "string", example: "Service Unavailable"},
+            ok: {type: "boolean", example: false},
+            error: {type: "string", example: "Dependency Failure"},
+            dependencies: {$ref: "#/components/schemas/HealthCheckDependencies"},
           },
         },
         UserUpdateRequest: {
@@ -1061,7 +1073,16 @@ export const openApiOptions: Options = {
       "/healthz": {
         get: {
           tags: ["System"],
-          summary: "서버 상태 및 DB 연결 확인",
+          summary: "서버 상태 및 종속성 확인",
+          parameters: [
+            {
+              in: "query",
+              name: "deep",
+              description: "Set to 1 to perform dependency checks (Firestore, Storage, Redis)",
+              required: false,
+              schema: {type: "string", enum: ["1"]},
+            },
+          ],
           responses: {
             "200": {
               description: "Health check succeeded",
@@ -1075,7 +1096,7 @@ export const openApiOptions: Options = {
               description: "Service unavailable",
               content: {
                 "application/json": {
-                  schema: {$ref: "#/components/schemas/LegacyErrorResponse"},
+                  schema: {$ref: "#/components/schemas/HealthCheckFailureResponse"},
                 },
               },
             },

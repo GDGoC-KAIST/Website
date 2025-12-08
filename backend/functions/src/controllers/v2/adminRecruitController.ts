@@ -1,6 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
-import {RecruitService, UpdateApplicationStatusDto, UpdateConfigDto} from "../../services/recruitService";
-import {AppError} from "../../utils/appError";
+import {RecruitService, UpdateApplicationStatusDto, UpdateConfigDto} from "../../services/recruitService.ts";
+import {AppError} from "../../utils/appError.ts";
 
 const recruitService = new RecruitService();
 

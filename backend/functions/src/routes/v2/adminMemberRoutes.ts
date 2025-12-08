@@ -1,8 +1,8 @@
 import {Router} from "express";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {requireRole} from "../../middleware/requireRole";
-import {createMember, resetLinkCode} from "../../controllers/v2/adminMemberController";
-import {legacyErrorBridge} from "../../middleware/legacyErrorBridge";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {requireRole} from "../../middleware/requireRole.ts";
+import {createMember, resetLinkCode} from "../../controllers/v2/adminMemberController.ts";
+import {legacyErrorBridge} from "../../middleware/legacyErrorBridge.ts";
 
 const adminMemberRouter = Router();
 

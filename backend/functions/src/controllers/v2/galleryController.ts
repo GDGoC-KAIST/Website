@@ -1,6 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
-import {GalleryService, CreateGalleryDto, UpdateGalleryDto} from "../../services/galleryService";
-import {AppError} from "../../utils/appError";
+import {GalleryService, CreateGalleryDto, UpdateGalleryDto} from "../../services/galleryService.ts";
+import {AppError} from "../../utils/appError.ts";
 
 const galleryService = new GalleryService();
 

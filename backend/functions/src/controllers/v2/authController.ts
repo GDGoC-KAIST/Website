@@ -1,8 +1,9 @@
 import {Request, Response, NextFunction} from "express";
-import {AuthV2Service} from "../../services/authService";
-import {AppError} from "../../utils/appError";
-import {SessionRepo} from "../../repositories/sessionRepo";
-import {env} from "../../config/env";
+import {AuthV2Service} from "../../services/authService.ts";
+import {AppError} from "../../utils/appError.ts";
+import {SessionRepo} from "../../repositories/sessionRepo.ts";
+import {env} from "../../config/env.ts";
+import {check as checkAbuseGuard} from "../../services/abuseGuard/abuseGuardService.ts";
 
 const authService = new AuthV2Service();
 const sessionRepo = new SessionRepo();
@@ -13,6 +14,16 @@ export async function loginGithub(
   next: NextFunction
 ): Promise<void> {
   try {
+    const abuseResult = await checkAbuseGuard("auth_login", req.telemetry, 20, 60, 120);
+    if (!abuseResult.allowed) {
+      throw AppError.tooManyRequests("Too many login attempts", {
+        requestId: (req as Request & {id?: string}).id,
+        rateLimited: true,
+        blockedUntil: abuseResult.blockedUntil,
+        remaining: abuseResult.remaining,
+      });
+    }
+
     if (env.disableGithubLogin) {
       throw new AppError(503, "SERVICE_DISABLED", "GitHub login is temporarily disabled");
     }
@@ -59,7 +70,7 @@ export async function logout(
 ): Promise<void> {
   try {
     console.log("[DEBUG] Logout start. Body:", req.body, "Query:", req.query);
-    const user = req.user;
+    const {user} = req;
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Authentication required");
     }

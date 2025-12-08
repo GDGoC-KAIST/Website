@@ -1,48 +1,39 @@
-import {Request, Response, NextFunction} from "express";
-import {AppError} from "../utils/appError";
+import cors, {CorsOptionsDelegate} from "cors";
 
-const rawAllowlist = process.env.CORS_ALLOWLIST ?? "";
-const ALLOWED_ORIGINS = rawAllowlist
+const allowlist = (process.env.CORS_ORIGIN ?? "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-function isAllowedOrigin(origin?: string | null): boolean {
-  if (!origin) return true;
-  if (ALLOWED_ORIGINS.length === 0) return true;
-  return ALLOWED_ORIGINS.includes(origin);
-}
+const allowLocalhost = process.env.CORS_ALLOW_LOCALHOST === "true";
 
-function applyCorsHeaders(res: Response, origin?: string | null) {
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-}
+const isLocalhost = (origin: string): boolean =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 
-export function corsMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const origin = req.get("origin");
+function originAllowed(origin: string | undefined | null): boolean {
+  if (!origin) return true; // allow server-to-server tools
 
-  if (!isAllowedOrigin(origin)) {
-    if (req.method === "OPTIONS") {
-      res.status(403).send("CORS origin forbidden");
-      return;
-    }
-    next(new AppError(403, "CORS_FORBIDDEN", "Origin not allowed"));
-    return;
+  const inAllowlist = allowlist.includes(origin);
+  const localhostOk = allowLocalhost && isLocalhost(origin);
+
+  if (process.env.NODE_ENV === "production") {
+    return inAllowlist;
   }
 
-  applyCorsHeaders(res, origin);
-
-  if (req.method === "OPTIONS") {
-    res.status(204).send("");
-    return;
-  }
-
-  next();
+  if (localhostOk) return true;
+  return inAllowlist;
 }
+
+const corsOptionsDelegate: CorsOptionsDelegate = (req, callback) => {
+  const origin = (req.headers?.origin as string | undefined) || undefined;
+  const allowed = originAllowed(origin);
+
+  const options = {
+    origin: allowed ? origin || true : false,
+    credentials: true,
+  };
+
+  callback(null, options);
+};
+
+export const corsMiddleware = cors(corsOptionsDelegate);

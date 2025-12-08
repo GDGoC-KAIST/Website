@@ -1,14 +1,14 @@
 import {Router} from "express";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {optionalAuthMiddleware} from "../../middleware/optionalAuth";
-import {requireMember} from "../../middleware/requireRole";
-import {createPost, getPost, listPosts, updatePost, deletePost} from "../../controllers/v2/postController";
-import {validateRequest} from "../../middleware/validateRequest";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {optionalAuthMiddleware} from "../../middleware/optionalAuth.ts";
+import {requireMember} from "../../middleware/requireRole.ts";
+import {createPost, getPost, listPosts, updatePost, deletePost} from "../../controllers/v2/postController.ts";
+import {validateRequest} from "../../middleware/validateRequest.ts";
 import {
   createPostSchema,
   updatePostSchema,
   postIdParamsSchema,
-} from "../../validators/schemas/postSchemas";
+} from "../../validators/schemas/postSchemas.ts";
 
 const postRouter = Router();
 

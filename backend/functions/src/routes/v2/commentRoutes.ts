@@ -1,13 +1,13 @@
 import {Router} from "express";
-import {createComment, deleteComment, listComments} from "../../controllers/v2/commentController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {optionalAuthMiddleware} from "../../middleware/optionalAuth";
-import {validateRequest} from "../../middleware/validateRequest";
+import {createComment, deleteComment, listComments} from "../../controllers/v2/commentController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {optionalAuthMiddleware} from "../../middleware/optionalAuth.ts";
+import {validateRequest} from "../../middleware/validateRequest.ts";
 import {
   createCommentSchema,
   getCommentsSchema,
   deleteCommentSchema,
-} from "../../validators/schemas/commentSchemas";
+} from "../../validators/schemas/commentSchemas.ts";
 
 const commentRouter = Router();
 

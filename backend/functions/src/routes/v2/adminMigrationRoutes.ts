@@ -1,7 +1,7 @@
 import {Router} from "express";
-import {runMigration} from "../../controllers/v2/adminMigrationController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {requireAdmin} from "../../middleware/requireRole";
+import {runMigration} from "../../controllers/v2/adminMigrationController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {requireAdmin} from "../../middleware/requireRole.ts";
 
 const adminMigrationRouter = Router();
 

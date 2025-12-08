@@ -3,18 +3,30 @@ import * as crypto from "crypto";
 import * as logger from "firebase-functions/logger";
 import {Timestamp} from "firebase-admin/firestore";
 import {db} from "../config/firebase";
+import {AppError} from "../utils/appError";
 import {RecruitApplication} from "../types/recruit";
 import {hashPassword, comparePassword} from "../utils/security";
 import {enqueueOutboxMessage} from "../outbox/recruitOutbox";
 import {setCorsHeaders} from "../utils/cors";
 import {normalizeEmail, assertApplicationOpen} from "../utils/recruitHelpers";
 import {readRecruitConfig, serializeRecruitConfig} from "../utils/recruitConfig";
+import {check as checkAbuseGuard} from "../services/abuseGuard/abuseGuardService";
 
 const APPLICATIONS = "recruitApplications";
 const SESSIONS = "recruitSessions";
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+const isTestEnv = process.env.NODE_ENV === "test";
+
+function logRecruit(
+  level: "info" | "warn" | "error",
+  message: string,
+  meta: Record<string, unknown>
+): void {
+  if (isTestEnv && level !== "error") return;
+  logger[level](message, meta);
+}
 
 function withCors(
   request: Request,
@@ -33,13 +45,18 @@ function handleControllerError(
   error: unknown,
   defaultStatus = 500
 ): void {
-  const status = (error as {status?: number})?.status ?? defaultStatus;
+  const status = (error as AppError)?.statusCode ?? (error as {status?: number})?.status ?? defaultStatus;
+  const errorCode = (error as AppError)?.errorCode;
+  const details = (error as AppError)?.details;
   const message = error instanceof Error ? error.message : "Unknown error";
   // Only log server errors (5xx), not client errors (4xx)
   if (status >= 500) {
     logger.error("Recruit controller error", {message, error, status});
   }
-  response.status(status).json({error: message});
+  const payload: Record<string, unknown> = {error: message};
+  if (errorCode) payload.code = errorCode;
+  if (details) payload.details = details;
+  response.status(status).json(payload);
 }
 
 function generateTempPassword(length = 12): string {
@@ -48,6 +65,24 @@ function generateTempPassword(length = 12): string {
     output += crypto.randomBytes(8).toString("base64").replace(/[^a-zA-Z0-9]/g, "");
   }
   return output.slice(0, length);
+}
+
+async function enforceAbuseGuard(
+  routeKey: string,
+  request: Request,
+  limit: number,
+  windowSec: number,
+  penaltySec: number
+): Promise<void> {
+  const result = await checkAbuseGuard(routeKey, request.telemetry, limit, windowSec, penaltySec);
+  if (!result.allowed) {
+    throw AppError.tooManyRequests("Too many requests", {
+      requestId: (request as Request & {id?: string}).id,
+      rateLimited: true,
+      blockedUntil: result.blockedUntil,
+      remaining: result.remaining,
+    });
+  }
 }
 
 async function createSession(email: string): Promise<string> {
@@ -132,6 +167,8 @@ export async function recruitApplyHandler(
   }
 
   try {
+    await enforceAbuseGuard("recruit_apply", request, 5, 60, 300);
+
     const config = await readRecruitConfig();
     assertApplicationOpen(config);
 
@@ -208,13 +245,13 @@ export async function recruitApplyHandler(
     await queueConfirmationEmail(confirmationTarget, application.name);
 
     response.status(201).json({success: true});
-    console.info("Recruit Apply Attempt", {
+    logRecruit("info", "Recruit Apply Attempt", {
       outcome: "success",
       ipHash: request.telemetry?.ipHash,
       uaSummary: request.telemetry?.uaSummary,
     });
   } catch (error) {
-    console.warn("Recruit Apply Failed", {
+    logRecruit("warn", "Recruit Apply Failed", {
       outcome: "error",
       ipHash: request.telemetry?.ipHash,
       uaSummary: request.telemetry?.uaSummary,
@@ -236,6 +273,8 @@ export async function recruitLoginHandler(
   }
 
   try {
+    await enforceAbuseGuard("recruit_login", request, 10, 60, 120);
+
     const {kaistEmail, password} = request.body ?? {};
     if (!kaistEmail || !password) {
       response.status(400).json({error: "kaistEmail and password are required"});
@@ -270,7 +309,7 @@ export async function recruitLoginHandler(
 
       const token = await createSession(normalizedEmail);
       response.status(200).json({success: true, token});
-      console.info("Recruit Login Attempt", {
+      logRecruit("info", "Recruit Login Attempt", {
         outcome: "success",
         ipHash: request.telemetry?.ipHash,
         uaSummary: request.telemetry?.uaSummary,
@@ -305,7 +344,7 @@ export async function recruitLoginHandler(
       response.status(423).json({
         error: "Account locked after too many failed attempts. Check your email.",
       });
-      console.warn("Recruit Login Failed", {
+      logRecruit("warn", "Recruit Login Failed", {
         outcome: "locked",
         ipHash: request.telemetry?.ipHash,
         uaSummary: request.telemetry?.uaSummary,
@@ -315,13 +354,13 @@ export async function recruitLoginHandler(
 
     await docRef.update(updates);
     response.status(401).json({error: "Invalid credentials"});
-    console.warn("Recruit Login Failed", {
+    logRecruit("warn", "Recruit Login Failed", {
       outcome: "invalid_credentials",
       ipHash: request.telemetry?.ipHash,
       uaSummary: request.telemetry?.uaSummary,
     });
   } catch (error) {
-    console.error("Recruit Login Error", {
+    logRecruit("error", "Recruit Login Error", {
       outcome: "error",
       ipHash: request.telemetry?.ipHash,
       uaSummary: request.telemetry?.uaSummary,

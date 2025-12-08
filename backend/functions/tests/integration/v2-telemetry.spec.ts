@@ -1,3 +1,4 @@
+import {afterAll, afterEach, beforeAll, describe, expect, it, jest} from "@jest/globals";
 import request from "supertest";
 import {createTestApp} from "./appFactory";
 import {setupTestEnv, teardownTestEnv, clearFirestore} from "./setup";
@@ -23,8 +24,8 @@ describe("Telemetry", () => {
 
     const res = await request(app).get("/v2/healthz").expect(200);
 
-    const entries = spy.mock.calls.map((call) => call[0] as string);
-    const telemetryLogs = entries.filter((entry) => entry.includes("ipHash"));
+    const entries = spy.mock.calls.map((call: unknown[]) => call[0] as unknown);
+    const telemetryLogs = entries.filter((entry): entry is string => typeof entry === "string" && entry.includes("ipHash"));
     expect(telemetryLogs.length).toBeGreaterThan(0);
     expect(res.body.ipHash).toBeUndefined();
     expect(typeof res.text === "string" ? res.text.includes("ipHash") : false).toBe(false);
@@ -40,8 +41,8 @@ describe("Telemetry", () => {
       .set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
       .expect(200);
 
-    const entries = spy.mock.calls.map((call) => call[0] as string);
-    const telemetryLogs = entries.filter((entry) => entry.includes("telemetry"));
+    const entries = spy.mock.calls.map((call: unknown[]) => call[0] as unknown);
+    const telemetryLogs = entries.filter((entry): entry is string => typeof entry === "string" && entry.includes("telemetry"));
     expect(telemetryLogs.length).toBeGreaterThan(0);
     expect(telemetryLogs.some((entry) => entry.includes("Chrome"))).toBe(true);
     expect(telemetryLogs.some((entry) => entry.includes("Mac"))).toBe(true);

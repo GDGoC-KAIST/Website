@@ -1,7 +1,7 @@
 import {Request, Response, NextFunction} from "express";
-import {MemberAdminService} from "../../services/memberService";
-import {AppError} from "../../utils/appError";
-import type {MemberRole} from "../../types/member";
+import {MemberAdminService} from "../../services/memberService.ts";
+import {AppError} from "../../utils/appError.ts";
+import type {MemberRole} from "../../types/member.ts";
 
 const adminService = new MemberAdminService();
 
@@ -39,7 +39,7 @@ export async function resetLinkCode(
   next: NextFunction
 ): Promise<void> {
   try {
-    const memberId = req.params.memberId;
+    const {memberId} = req.params;
     if (!memberId) {
       res.status(400).json({error: "memberId is required"});
       return;

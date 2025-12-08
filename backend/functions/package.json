@@ -1,7 +1,8 @@
 {
 	"name": "functions",
 	"scripts": {
-		"lint": "eslint --ext .js,.ts .",
+		"lint": "eslint --ext .js,.ts,.mts .",
+		"typecheck": "tsc --noEmit",
 		"build": "tsc",
 		"build:watch": "tsc --watch",
 		"serve": "npm run build && firebase emulators:start --only functions",
@@ -9,15 +10,26 @@
 		"start": "npm run shell",
 		"deploy": "firebase deploy --only functions",
 		"logs": "firebase functions:log",
-		"test:integration": "if [ -z \"$CI\" ]; then npm run build; fi && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit\"",
-		"test:integration:ci": "CI=1 node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit\"",
+		"test:integration": "if [ -z \"$CI\" ]; then npm run build; fi && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit --testPathPattern=tests/integration\"",
+		"test:integration:ci": "CI=1 node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit --testPathPattern=tests/integration\"",
+		"test:unit": "jest --config jest.config.js --runInBand --passWithNoTests --testPathPattern=tests/unit",
+		"test:security": "if [ -z \"$CI\" ]; then npm run build; fi && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand --detectOpenHandles --forceExit --testPathPattern=tests/security\"",
 		"test:gate": "npm run audit:verify && node scripts/pick-ports.mjs && DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config scripts/with-temp-env.mjs ./node_modules/.bin/firebase emulators:exec --config ../firebase.test.json --project demo-test --only firestore,auth,functions,storage \"DOTENV_CONFIG_QUIET=true dotenv_config_path=.env.test node -r dotenv/config ./node_modules/.bin/jest --config jest.config.js --runInBand tests/contract tests/security tests/smoke --detectOpenHandles\"",
 		"test:contract": "jest -c jest.contract.config.js --runInBand",
 		"test": "npm run test:integration && npm run test:gate",
-		"openapi:print": "ts-node --project tsconfig.scripts.json --esm scripts/print-openapi.ts",
-		"openapi:check": "npm run openapi:print > current-spec.json && git diff --no-index --exit-code openapi.json current-spec.json && rm current-spec.json",
+		"gate": "npm run lint && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:security && npm run openapi:check && npm run openapi:verify && npm run ssot:gate && npm run audit:verify",
+		"openapi:print": "ts-node scripts/print-openapi.ts --out docs/openapi.json --scope ops",
+		"openapi:generate:public": "ts-node scripts/print-openapi.ts --out docs/openapi.public.json --scope public",
+		"openapi:generate:admin": "ts-node scripts/print-openapi.ts --out docs/openapi.admin.json --scope admin",
+		"openapi:generate:ops": "ts-node scripts/print-openapi.ts --out docs/openapi.ops.json --scope ops",
+		"openapi:check": "ts-node scripts/verify-openapi-coverage.mts",
+		"openapi:verify": "node --loader ts-node/esm scripts/verify-openapi-sync.mts",
 		"ssot:gate": "ts-node --project tsconfig.scripts.json --esm scripts/ssot-gate.ts",
-		"audit:verify": "node --loader ts-node/esm scripts/verify-audit-evidence.mts"
+		"audit:verify": "node --loader ts-node/esm scripts/verify-audit-evidence.mts",
+		"perf:browse": "k6 run perf/scenarios/browse.js",
+		"perf:auth": "k6 run perf/scenarios/authenticated.js",
+		"perf:attack": "k6 run perf/scenarios/recruit_attack.js",
+		"perf:soak": "k6 run perf/scenarios/soak.js"
 	},
 	"engines": {
 		"node": "20"
@@ -29,18 +41,22 @@
 		"aws-sdk": "^2.1692.0",
 		"bcrypt": "^6.0.0",
 		"busboy": "^1.6.0",
+		"cors": "^2.8.5",
 		"dotenv": "^17.2.3",
 		"express": "^4.18.2",
 		"firebase-admin": "^13.6.0",
 		"firebase-functions": "^7.0.1",
+		"ioredis": "^5.4.2",
 		"json2csv": "^6.0.0-alpha.2",
 		"jsonwebtoken": "^9.0.2",
 		"node-mailjet": "^6.0.11",
 		"nodemailer": "^7.0.10",
 		"swagger-jsdoc": "^6.2.8",
+		"swagger-ui-express": "^5.0.1",
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
+		"@cspotcode/source-map-support": "^0.8.1",
 		"@types/bcrypt": "^6.0.0",
 		"@types/busboy": "^1.5.4",
 		"@types/express": "^4.17.21",
@@ -60,7 +76,8 @@
 		"supertest": "^7.1.1",
 		"ts-jest": "^29.2.5",
 		"ts-node": "^10.9.2",
-		"typescript": "^5.7.3"
+		"typescript": "^5.7.3",
+		"@types/swagger-ui-express": "^4.1.6"
 	},
 	"private": true
 }

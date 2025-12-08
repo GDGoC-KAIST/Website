@@ -9,7 +9,7 @@ import {toFirestorePatch} from "../utils/patch";
 async function fetchGitHubReadme(githubUrl: string): Promise<string | undefined> {
   try {
     // GitHub URL 파싱: https://github.com/owner/repo
-    const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
     if (!match) {
       logger.warn(`Invalid GitHub URL format: ${githubUrl}`);
       return undefined;

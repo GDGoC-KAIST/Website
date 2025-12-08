@@ -6,13 +6,14 @@ import {
   recruitUpdateHandler,
   recruitResetHandler,
   recruitConfigHandler,
-} from "../../controllers/recruitController";
+} from "../../controllers/recruitController.ts";
 
 type LegacyHandler = (req: Request, res: Response) => Promise<void> | void;
 
 function overrideMethod(req: Request, method?: string): () => void {
   if (!method || req.method === method) {
-    return () => {};
+    // Intentionally no-op when method already matches
+    return () => undefined;
   }
   const requestWithMethod = req as Request & {method: string};
   const originalMethod = requestWithMethod.method;

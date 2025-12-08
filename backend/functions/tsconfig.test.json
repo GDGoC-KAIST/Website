@@ -2,6 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "isolatedModules": true,
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "types": ["jest", "node"],
+    "noEmit": true
+  },
+  "include": [
+    "tests/**/*",
+    "src/**/*"
+  ]
 }

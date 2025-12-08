@@ -1,4 +1,4 @@
-const REDACT_KEYS = new Set([
+export const REDACT_KEYS = new Set([
   "password",
   "token",
   "accesstoken",

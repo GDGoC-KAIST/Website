@@ -1,9 +1,9 @@
 import type {Request, Response, NextFunction} from "express";
-import {CommentService, CreateCommentDto, ListCommentQuery, UserContext} from "../../services/commentService";
-import {AppError} from "../../utils/appError";
-import type {Comment} from "../../types/schema";
+import {CommentService, CreateCommentDto, ListCommentQuery, UserContext} from "../../services/commentService.ts";
+import {AppError} from "../../utils/appError.ts";
+import type {Comment} from "../../types/schema.ts";
 import {Timestamp} from "firebase-admin/firestore";
-import type {CreateCommentInput, GetCommentsInput} from "../../validators/schemas/commentSchemas";
+import type {CreateCommentInput, GetCommentsInput} from "../../validators/schemas/commentSchemas.ts";
 
 const commentService = new CommentService();
 

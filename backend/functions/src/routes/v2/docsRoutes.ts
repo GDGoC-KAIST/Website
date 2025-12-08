@@ -1,14 +1,28 @@
 import {Router} from "express";
-import {serveOpenApiJson, serveSwaggerUi} from "../../controllers/v2/docsController";
+import swaggerUi from "swagger-ui-express";
+import {
+	serveOpenApiJson,
+	serveOpenApiOpsJson,
+	serveOpenApiPublicJson,
+	serveOpenApiAdminJson,
+	serveSwaggerUi,
+} from "../../controllers/v2/docsController.ts";
 
 const docsRouter = Router();
 
-/**
- * Documentation routes
- * GET /v2/openapi.json - OpenAPI JSON specification
- * GET /v2/docs - Swagger UI HTML page
- */
+// Serve raw JSON specs
 docsRouter.get("/openapi.json", serveOpenApiJson);
+docsRouter.get("/openapi.public.json", serveOpenApiPublicJson);
+docsRouter.get("/openapi.admin.json", serveOpenApiAdminJson);
+docsRouter.get("/openapi.ops.json", serveOpenApiOpsJson);
+
+// Swagger UI with multiple specs (inline, no redirect)
 docsRouter.get("/docs", serveSwaggerUi);
+
+// Serve static assets for Swagger UI if prebuilt HTML is present
+docsRouter.use("/docs", swaggerUi.serve);
+
+// Fallback inline UI if static file missing (handles pre-baked HTML case)
+docsRouter.get("/docs-inline", serveSwaggerUi);
 
 export {docsRouter};

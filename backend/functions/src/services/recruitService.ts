@@ -19,7 +19,7 @@ export interface UserContext {
   roles: Role[];
 }
 
-export interface UpdateConfigDto extends Partial<RecruitConfig> {}
+export type UpdateConfigDto = Partial<RecruitConfig>;
 
 export interface UpdateApplicationStatusDto {
   status: RecruitApplicationStatus;

@@ -6,7 +6,8 @@ const OPENAPI_SOURCE = "src/docs/openapi.ts";
 const OPENAPI_SPEC = "openapi.json";
 
 function run(command: string, options: ExecSyncOptions = {}): string {
-  return execSync(command, {encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...options}).trim();
+  const result = execSync(command, {encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...options});
+  return result.toString().trim();
 }
 
 function maybeFetchBase(): void {

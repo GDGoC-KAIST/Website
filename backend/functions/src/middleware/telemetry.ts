@@ -1,47 +1,64 @@
-import crypto from "node:crypto";
+import {randomUUID} from "node:crypto";
 import type {Request, Response, NextFunction} from "express";
+import * as logger from "firebase-functions/logger";
+import {hashIp} from "../utils/ipHash";
+import {summarizeUa} from "../utils/uaSummary";
+import {getReferrerHost} from "../utils/referrer";
+import {getUtm} from "../utils/utm";
+import {visitorSessionService} from "../services/visitorSessionService";
+import type {TelemetryData} from "../types/telemetry";
+import {env} from "../config/env";
 
-// Ensure SALT is never undefined to prevent test failures
-const SALT = process.env.IP_HASH_SALT || "test-salt-fixed-value";
+const SALT = env.ipHashSalt;
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
-function hashIp(ip?: string) {
-  if (!ip) return "unknown";
-  const normalized = ip.replace(/^::ffff:/, "");
-  return crypto.createHash("sha256").update(`${SALT}|${normalized}`).digest("hex");
-}
+export async function telemetryMiddleware(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const visitorId = (req.get("x-visitor-id") || req.get("X-Visitor-Id") || "").trim() || randomUUID();
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || req.ip;
+    const userAgent = (req.headers["user-agent"] as string) || "";
+    const referrerHost = getReferrerHost(req.get("referer") || req.get("referrer") || undefined);
+    const utm = getUtm(req.query as Record<string, unknown>);
+    const path = req.path || "/";
+    const {method} = req;
 
-function summarizeUa(ua: string = "") {
-  // Simple heuristic parsing to satisfy test expectations (Chrome, Mac, etc.)
-  const isBot = /bot|crawler|spider/i.test(ua);
-  
-  let browserFamily = "Unknown";
-  if (/Chrome/i.test(ua)) browserFamily = "Chrome";
-  else if (/Safari/i.test(ua)) browserFamily = "Safari";
-  else if (/Firefox/i.test(ua)) browserFamily = "Firefox";
-  
-  let osFamily = "Unknown";
-  if (/Mac/i.test(ua)) osFamily = "Mac";
-  else if (/Windows/i.test(ua)) osFamily = "Windows";
-  else if (/Android/i.test(ua)) osFamily = "Android";
-  else if (/iOS|iPhone/i.test(ua)) osFamily = "iOS";
-  else if (/Linux/i.test(ua)) osFamily = "Linux";
+    const telemetry: TelemetryData = {
+      visitorId,
+      ipHash: hashIp(ip, SALT),
+      uaSummary: summarizeUa(userAgent),
+      referrerHost,
+      utm,
+      path,
+      method,
+    };
 
-  return { browserFamily, osFamily, isBot };
-}
+    req.telemetry = telemetry;
 
-export function telemetryMiddleware(req: Request, _res: Response, next: NextFunction) {
-  // robust ip extraction
-  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || req.ip;
-  const uaString = (req.headers["user-agent"] as string) || "";
+    try {
+      await visitorSessionService.upsertSession(telemetry, SESSION_TIMEOUT_MS);
+    } catch (error) {
+      // Non-critical: fall back gracefully when writes are throttled or Firestore is unavailable
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn("Telemetry write skipped", {error: message});
+    }
 
-  const ipHash = hashIp(ip);
-  const uaSummary = summarizeUa(uaString);
+    logger.info("telemetry", {
+      visitorId,
+      ipHash: telemetry.ipHash,
+      browser: telemetry.uaSummary.browser,
+      os: telemetry.uaSummary.os,
+      device: telemetry.uaSummary.device,
+      isBot: telemetry.uaSummary.isBot,
+      referrer: referrerHost || "none",
+    });
 
-  req.telemetry = { ipHash, uaSummary };
+    // Maintain stdout summary for existing telemetry tests while avoiding raw UA/IP
+    console.log(
+      `[telemetry] visitorId=${visitorId} ipHash=${telemetry.ipHash} browser=${telemetry.uaSummary.browser} os=${telemetry.uaSummary.os} device=${telemetry.uaSummary.device} isBot=${telemetry.uaSummary.isBot} referrer=${referrerHost || "none"}`
+    );
 
-  // CRITICAL: Log as a string for the test spy to catch
-  // The test expects "ipHash", "Chrome", "Mac", etc. in the first string argument.
-  console.log(`[telemetry] ipHash=${ipHash} browser=${uaSummary.browserFamily} os=${uaSummary.osFamily} isBot=${uaSummary.isBot}`);
-
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 }

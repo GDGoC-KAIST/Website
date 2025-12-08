@@ -5,11 +5,11 @@ import {
   listImages,
   updateImage,
   uploadImage,
-} from "../../controllers/v2/imageController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {optionalAuthMiddleware} from "../../middleware/optionalAuth";
-import {requireMember} from "../../middleware/requireRole";
-import {uploadErrorHandler} from "../../middleware/uploadErrorHandler";
+} from "../../controllers/v2/imageController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {optionalAuthMiddleware} from "../../middleware/optionalAuth.ts";
+import {requireMember} from "../../middleware/requireRole.ts";
+import {uploadErrorHandler} from "../../middleware/uploadErrorHandler.ts";
 
 const imageRouter = Router();
 

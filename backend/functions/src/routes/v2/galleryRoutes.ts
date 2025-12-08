@@ -5,9 +5,9 @@ import {
   getGallery,
   listGalleries,
   updateGallery,
-} from "../../controllers/v2/galleryController";
-import {authMiddleware} from "../../middleware/authMiddleware";
-import {requireAdmin} from "../../middleware/requireRole";
+} from "../../controllers/v2/galleryController.ts";
+import {authMiddleware} from "../../middleware/authMiddleware.ts";
+import {requireAdmin} from "../../middleware/requireRole.ts";
 
 const galleryRouter = Router();
 

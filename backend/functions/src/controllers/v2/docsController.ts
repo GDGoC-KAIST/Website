@@ -1,48 +1,66 @@
 import type {Request, Response, NextFunction} from "express";
-import swaggerJsdoc from "swagger-jsdoc";
 import fs from "fs";
 import path from "path";
-import {openApiOptions} from "../../docs/openapi";
 
 const swaggerHtmlPath = path.join(process.cwd(), "public/swagger-ui.html");
+const docsDir = path.join(process.cwd(), "docs");
 
-/**
- * Serve OpenAPI JSON specification
- * GET /v2/openapi.json
- */
+function serveFile(filePath: string, res: Response) {
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved)) {
+    res.status(404).json({error: "Spec file not found"});
+    return;
+  }
+  res.setHeader("Content-Type", "application/json");
+  res.sendFile(resolved);
+}
+
 export function serveOpenApiJson(_req: Request, res: Response, next: NextFunction) {
   try {
-    const spec = swaggerJsdoc(openApiOptions);
-
-    // Runtime injection to ensure TipTapDoc exists (defensive fix for swagger-jsdoc)
-    const s = spec as any;
-    s.components = s.components || {};
-    s.components.schemas = s.components.schemas || {};
-    s.components.schemas.TipTapDoc = s.components.schemas.TipTapDoc || {
-      type: "object",
-      additionalProperties: true,
-      description: "TipTap editor JSON structure - injected at runtime",
-    };
-
-    res.status(200).json(spec);
+    const opsPath = path.join(docsDir, "openapi.ops.json");
+    serveFile(opsPath, res);
   } catch (error) {
     next(error);
   }
 }
 
-/**
- * Serve Swagger UI HTML page
- * GET /v2/docs
- */
+export function serveOpenApiOpsJson(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const opsPath = path.join(docsDir, "openapi.ops.json");
+    serveFile(opsPath, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function serveOpenApiPublicJson(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const publicPath = path.join(docsDir, "openapi.public.json");
+    serveFile(publicPath, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function serveOpenApiAdminJson(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const adminPath = path.join(docsDir, "openapi.admin.json");
+    serveFile(adminPath, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export function serveSwaggerUi(_req: Request, res: Response, next: NextFunction) {
   try {
     if (fs.existsSync(swaggerHtmlPath)) {
       const html = fs.readFileSync(swaggerHtmlPath, "utf8");
       res.setHeader("Content-Type", "text/html");
       res.status(200).send(html);
-    } else {
-      // Fallback: Inline HTML if file doesn't exist
-      const inlineHtml = `
+      return;
+    }
+
+    const inlineHtml = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -58,7 +76,11 @@ export function serveSwaggerUi(_req: Request, res: Response, next: NextFunction)
   <script>
     window.onload = function() {
       window.ui = SwaggerUIBundle({
-        url: "./openapi.json",
+        urls: [
+          { url: '/v2/openapi.public.json', name: 'Public' },
+          { url: '/v2/openapi.admin.json', name: 'Admin' },
+          { url: '/v2/openapi.ops.json', name: 'Ops' }
+        ],
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -75,9 +97,8 @@ export function serveSwaggerUi(_req: Request, res: Response, next: NextFunction)
 </body>
 </html>
       `;
-      res.setHeader("Content-Type", "text/html");
-      res.status(200).send(inlineHtml);
-    }
+    res.setHeader("Content-Type", "text/html");
+    res.status(200).send(inlineHtml);
   } catch (error) {
     next(error);
   }
